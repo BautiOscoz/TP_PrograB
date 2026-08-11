@@ -1,3 +1,5 @@
+package Core.Run;
+
 import Core.domain.Coach;
 import Core.domain.Person;
 import Core.domain.Player;
@@ -10,7 +12,7 @@ import java.util.Map;
 
 public class Main {
 
-    public static void main(String[] args) {
+     public static void main(String[] args) {
         try {
             String jsonPath = args.length > 0 ? args[0] : "torneo.json";
             TournamentData tournament = TournamentLoader.load(jsonPath);
@@ -20,8 +22,8 @@ public class Main {
             System.out.println("Referees loaded: " + tournament.getReferees().size());
             System.out.println();
 
-            printTeams(tournament);
-            printReferees(tournament);
+            //printTeams(tournament);
+            //printReferees(tournament);
         } catch (Exception exception) {
             System.err.println("Could not load tournament data: " + exception.getMessage());
             exception.printStackTrace();
