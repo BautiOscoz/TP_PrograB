@@ -4,12 +4,12 @@ import Core.domain.Coach;
 import Core.domain.Player;
 import Core.domain.Referee;
 import Core.domain.Team;
-import Core.dto.ArbitroDto;
-import Core.dto.DtDto;
-import Core.dto.EquipoDto;
-import Core.dto.JugadorDto;
-import Core.dto.PersonaDto;
-import Core.dto.TorneoRootDto;
+import Core.dto.CoachDto;
+import Core.dto.PersonDto;
+import Core.dto.PlayerDto;
+import Core.dto.RefereeDto;
+import Core.dto.TeamDto;
+import Core.dto.TournamentRootDto;
 import Core.enums.Position;
 import com.google.gson.Gson;
 
@@ -29,9 +29,9 @@ public class TournamentLoader {
 
     public static TournamentData load(String filePath) throws IOException {
         String json = Files.readString(Path.of(filePath));
-        TorneoRootDto root = GSON.fromJson(json, TorneoRootDto.class);
+        TournamentRootDto root = GSON.fromJson(json, TournamentRootDto.class);
 
-        if (root == null || root.torneo == null) {
+        if (root == null || root.tournament == null) {
             throw new IOException("Invalid tournament file: missing root 'torneo' node.");
         }
 
@@ -40,24 +40,24 @@ public class TournamentLoader {
         return new TournamentData(teams, referees);
     }
 
-    private static List<Team> mapTeams(TorneoRootDto root) {
+    private static List<Team> mapTeams(TournamentRootDto root) {
         List<Team> teams = new ArrayList<>();
 
-        if (root.torneo.equipos == null || root.torneo.equipos.equipo == null) {
+        if (root.tournament.teams == null || root.tournament.teams.team == null) {
             return teams;
         }
 
         int teamId = 1;
-        for (EquipoDto equipoDto : root.torneo.equipos.equipo) {
-            Coach coach = mapCoach(equipoDto.plantel != null ? equipoDto.plantel.dt : null);
-            Team team = new Team(teamId++, equipoDto.nombre, equipoDto.pais, equipoDto.ranking, coach);
+        for (TeamDto teamDto : root.tournament.teams.team) {
+            Coach coach = mapCoach(teamDto.squad != null ? teamDto.squad.coach : null);
+            Team team = new Team(teamId++, teamDto.name, teamDto.country, teamDto.ranking, coach);
 
-            if (equipoDto.plantel != null
-                    && equipoDto.plantel.jugadores != null
-                    && equipoDto.plantel.jugadores.jugador != null) {
+            if (teamDto.squad != null
+                    && teamDto.squad.players != null
+                    && teamDto.squad.players.player != null) {
                 int shirtNumber = 1;
-                for (JugadorDto jugadorDto : equipoDto.plantel.jugadores.jugador) {
-                    team.addPlayer(mapPlayer(jugadorDto, shirtNumber++));
+                for (PlayerDto playerDto : teamDto.squad.players.player) {
+                    team.addPlayer(mapPlayer(playerDto, shirtNumber++));
                 }
             }
 
@@ -67,76 +67,76 @@ public class TournamentLoader {
         return teams;
     }
 
-    private static List<Referee> mapReferees(TorneoRootDto root) {
+    private static List<Referee> mapReferees(TournamentRootDto root) {
         List<Referee> referees = new ArrayList<>();
 
-        if (root.torneo.arbitros == null || root.torneo.arbitros.arbitro == null) {
+        if (root.tournament.referees == null || root.tournament.referees.referee == null) {
             return referees;
         }
 
-        for (ArbitroDto arbitroDto : root.torneo.arbitros.arbitro) {
-            referees.add(mapReferee(arbitroDto));
+        for (RefereeDto refereeDto : root.tournament.referees.referee) {
+            referees.add(mapReferee(refereeDto));
         }
 
         return referees;
     }
 
-    private static Coach mapCoach(DtDto dtDto) {
-        if (dtDto == null || dtDto.persona == null) {
+    private static Coach mapCoach(CoachDto coachDto) {
+        if (coachDto == null || coachDto.person == null) {
             throw new IllegalArgumentException("Each team must have a coach with personal data.");
         }
 
-        PersonName personName = splitFullName(dtDto.persona.nombre);
+        PersonName personName = splitFullName(coachDto.person.fullName);
         return new Coach(
-                dtDto.persona.nroDocumento,
+                coachDto.person.documentNumber,
                 personName.firstName(),
                 personName.lastName(),
-                dtDto.persona.tipoDocumento,
-                parseDate(dtDto.persona.fechaNacimiento),
-                dtDto.pais,
-                dtDto.titulosObtenidos
+                coachDto.person.documentType,
+                parseDate(coachDto.person.birthDate),
+                coachDto.country,
+                coachDto.titlesWon
         );
     }
 
-    private static Referee mapReferee(ArbitroDto arbitroDto) {
-        PersonName personName = splitFullName(arbitroDto.persona.nombre);
+    private static Referee mapReferee(RefereeDto refereeDto) {
+        PersonName personName = splitFullName(refereeDto.person.fullName);
         return new Referee(
-                arbitroDto.persona.nroDocumento,
+                refereeDto.person.documentNumber,
                 personName.firstName(),
                 personName.lastName(),
-                arbitroDto.persona.tipoDocumento,
-                parseDate(arbitroDto.persona.fechaNacimiento),
-                arbitroDto.pais,
-                arbitroDto.aniosReferato
+                refereeDto.person.documentType,
+                parseDate(refereeDto.person.birthDate),
+                refereeDto.country,
+                refereeDto.refereeYears
         );
     }
 
-    private static Player mapPlayer(JugadorDto jugadorDto, int shirtNumber) {
-        PersonaDto persona = jugadorDto.persona;
-        PersonName personName = splitFullName(persona.nombre);
+    private static Player mapPlayer(PlayerDto playerDto, int shirtNumber) {
+        PersonDto person = playerDto.person;
+        PersonName personName = splitFullName(person.fullName);
 
         Player player = new Player(
-                persona.nroDocumento,
+                person.documentNumber,
                 personName.firstName(),
                 personName.lastName(),
-                persona.tipoDocumento,
-                parseDate(persona.fechaNacimiento),
+                person.documentType,
+                parseDate(person.birthDate),
                 shirtNumber,
-                mapPosition(jugadorDto.posicion)
+                mapPosition(playerDto.position)
         );
 
-        player.setCharacteristics(copyMap(jugadorDto.caracteristicas));
-        player.setStatistics(copyMap(jugadorDto.estadisticas));
+        player.setCharacteristics(copyMap(playerDto.characteristics));
+        player.setStatistics(copyMap(playerDto.statistics));
         return player;
     }
 
-    private static Position mapPosition(String posicion) {
-        return switch (posicion.toLowerCase()) {
+    private static Position mapPosition(String position) {
+        return switch (position.toLowerCase()) {
             case "arquero" -> Position.GOALKEEPER;
             case "defensor" -> Position.DEFENDER;
             case "mediocampista" -> Position.MIDFIELDER;
             case "delantero" -> Position.FORWARD;
-            default -> throw new IllegalArgumentException("Unknown player position: " + posicion);
+            default -> throw new IllegalArgumentException("Unknown player position: " + position);
         };
     }
 
