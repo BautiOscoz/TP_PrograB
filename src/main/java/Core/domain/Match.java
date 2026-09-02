@@ -3,6 +3,7 @@ package Core.domain;
 import Core.incidents.Incident;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public abstract class Match {
@@ -13,6 +14,9 @@ public abstract class Match {
     private int homeGoals;
     private int awayGoals;
     private List<Incident> incidents;
+    private List<Player> homeLineup;
+    private List<Player> awayLineup;
+    private boolean played;
 
     public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
         this.matchDate = matchDate;
@@ -22,6 +26,9 @@ public abstract class Match {
         this.homeGoals = 0;
         this.awayGoals = 0;
         this.incidents = new ArrayList<>();
+        this.homeLineup = new ArrayList<>();
+        this.awayLineup = new ArrayList<>();
+        this.played = false;
     }
 
     public void addIncident(Incident incident) {
@@ -47,6 +54,19 @@ public abstract class Match {
     public int getAwayGoals() { return awayGoals; }
     public void setAwayGoals(int awayGoals) { this.awayGoals = awayGoals; }
 
-    public List<Incident> getIncidents() { return incidents; }
-    public void setIncidents(List<Incident> incidents) { this.incidents = incidents; }
+    public List<Incident> getIncidents() { return Collections.unmodifiableList(incidents); }
+
+    public List<Player> getHomeLineup() { return Collections.unmodifiableList(homeLineup); }
+    public List<Player> getAwayLineup() { return Collections.unmodifiableList(awayLineup); }
+
+    public void setInitialLineups(List<Player> homeLineup, List<Player> awayLineup) {
+        if (homeLineup == null || awayLineup == null || homeLineup.size() != 11 || awayLineup.size() != 11) {
+            throw new IllegalArgumentException("Each initial lineup must contain exactly 11 players.");
+        }
+        this.homeLineup = new ArrayList<>(homeLineup);
+        this.awayLineup = new ArrayList<>(awayLineup);
+    }
+
+    public boolean isPlayed() { return played; }
+    public void setPlayed(boolean played) { this.played = played; }
 }

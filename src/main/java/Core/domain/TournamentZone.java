@@ -1,6 +1,7 @@
 package Core.domain;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class TournamentZone {
@@ -23,6 +24,5 @@ public class TournamentZone {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public List<Team> getTeams() { return teams; }
-    public void setTeams(List<Team> teams) { this.teams = teams; }
+    public List<Team> getTeams() { return Collections.unmodifiableList(teams); }
 }

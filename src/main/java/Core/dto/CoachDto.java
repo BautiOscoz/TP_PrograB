@@ -7,7 +7,7 @@ public class CoachDto {
     public PersonDto person;
 
     @SerializedName("pais")
-    public String country;
+    public CountryDto country;
 
     @SerializedName("titulosObtenidos")
     public int titlesWon;

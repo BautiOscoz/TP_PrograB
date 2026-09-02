@@ -4,14 +4,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-
-import java.util.Objects;
-
-import static Utils.Paths.GESTIONAR_INITIAL_MENU_VIEW;
 
 public class View extends Application {
     @Override

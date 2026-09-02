@@ -5999,33 +5999,6 @@
                     "pasesGol": 62,
                     "expulsiones": 1
                   }
-                },
-                {
-                  "posicion": "delantero",
-                  "persona": {
-                    "tipoDocumento": "DU",
-                    "nroDocumento": 963018,
-                    "nombre": "Soich Camila",
-                    "fechaNacimiento": "01/03/1970"
-                  },
-                  "caracteristicas": {
-                    "capacidadQuite": 83,
-                    "velocidad": 95,
-                    "habilidad": 56,
-                    "cabezazo": 79,
-                    "definicion": 78,
-                    "potenciaDisparo": 88,
-                    "visionDeJuego": 78,
-                    "resistenciaFisica": 91
-                  },
-                  "estadisticas": {
-                    "partidosJugados": 85,
-                    "goles": 32,
-                    "penales": 10,
-                    "penalesConvertidos": 8,
-                    "pasesGol": 6,
-                    "expulsiones": 2
-                  }
                 }
               ]
             },

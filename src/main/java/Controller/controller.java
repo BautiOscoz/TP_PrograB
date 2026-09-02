@@ -1,8 +1,7 @@
 package Controller;
 
 import javafx.fxml.FXML;
-
-import java.awt.*;
+import javafx.scene.control.Button;
 
 public class controller {
 

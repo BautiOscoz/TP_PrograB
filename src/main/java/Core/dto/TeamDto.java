@@ -7,7 +7,7 @@ public class TeamDto {
     public String name;
 
     @SerializedName("pais")
-    public String country;
+    public CountryDto country;
 
     public int ranking;
 

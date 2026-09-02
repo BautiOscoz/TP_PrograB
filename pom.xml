@@ -24,6 +24,12 @@
             <version>2.10.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.8</version>
+        </dependency>
+
         <!-- JavaFX Controls: Botones, tablas, layouts para la GUI -->
         <dependency>
             <groupId>org.openjfx</groupId>
@@ -58,8 +64,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <!-- Cambia esto por la clase que contenga tu main de la GUI -->
-                    <mainClass>Core.MainGUI</mainClass>
+                    <mainClass>GUI.AppLauncher</mainClass>
                 </configuration>
             </plugin>
         </plugins>

@@ -13,9 +13,9 @@ public class Player extends Person {
     private Map<String, Integer> characteristics;
     private Map<String, Integer> statistics;
 
-    public Player(int id, String name, String lastName, String documentType, LocalDate birthDate,
+    public Player(int id, String name, String lastName, String documentType, int documentNumber, LocalDate birthDate,
                   int shirtNumber, Position position) {
-        super(id, name, lastName, documentType, birthDate);
+        super(id, name, lastName, documentType, documentNumber, birthDate);
         this.shirtNumber = shirtNumber;
         this.position = position;
         this.isSuspended = false;
@@ -32,6 +32,12 @@ public class Player extends Person {
 
     public boolean isSuspended() { return isSuspended; }
     public void setSuspended(boolean suspended) { isSuspended = suspended; }
+
+    public boolean serveSuspensionIfNeeded() {
+        if (!isSuspended) return false;
+        isSuspended = false;
+        return true;
+    }
 
     public Map<String, Integer> getCharacteristics() { return characteristics; }
     public void setCharacteristics(Map<String, Integer> characteristics) { this.characteristics = characteristics; }

@@ -20,6 +20,7 @@ public class Main {
             System.out.println("=== TOURNAMENT DATA ===");
             System.out.println("Teams loaded: " + tournament.getTeams().size());
             System.out.println("Referees loaded: " + tournament.getReferees().size());
+            System.out.println("Countries loaded: " + tournament.getCountries().size());
             System.out.println();
 
             //printTeams(tournament);
@@ -37,7 +38,7 @@ public class Main {
             System.out.println("----------------------------------------");
             System.out.println("Team ID: " + team.getId());
             System.out.println("Name: " + team.getName());
-            System.out.println("Country: " + team.getCountry());
+            System.out.println("Country: " + team.getCountry().getName());
             System.out.println("Ranking: " + team.getRanking());
             System.out.println();
 
@@ -71,7 +72,7 @@ public class Main {
 
     private static void printCoach(Coach coach) {
         printPerson(coach);
-        System.out.println("  Nationality: " + coach.getNationality());
+        System.out.println("  Nationality: " + coach.getNationality().getName());
         System.out.println("  Titles won: " + coach.getTitlesWon());
     }
 
@@ -94,6 +95,7 @@ public class Main {
         System.out.println(prefix + "First name: " + person.getName());
         System.out.println(prefix + "Last name: " + person.getLastName());
         System.out.println(prefix + "Document type: " + person.getDocumentType());
+        System.out.println(prefix + "Document number: " + person.getDocumentNumber());
         System.out.println(prefix + "Birth date: " + person.getBirthDate());
     }
 

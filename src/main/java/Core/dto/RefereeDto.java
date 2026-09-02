@@ -7,7 +7,7 @@ public class RefereeDto {
     public PersonDto person;
 
     @SerializedName("pais")
-    public String country;
+    public CountryDto country;
 
     @SerializedName("aniosReferato")
     public int refereeYears;
