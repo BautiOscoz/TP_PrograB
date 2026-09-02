@@ -1,8 +1,12 @@
 package Core.domain;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDate;
 
-public class SecondLegMatch extends Match {
+public class SecondLegMatch extends Match implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private int firstLegHomeGoals;
     private int firstLegAwayGoals;
     private boolean settledByPenalties;

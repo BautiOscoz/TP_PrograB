@@ -1,8 +1,12 @@
 package Core.domain;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDate;
 
-public class Coach extends Person {
+public class Coach extends Person implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private Country nationality;
     private int titlesWon;
 

@@ -2,11 +2,15 @@ package Core.domain;
 
 import Core.enums.Position;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Player extends Person {
+public class Player extends Person implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private int shirtNumber;
     private Position position;
     private boolean isSuspended;

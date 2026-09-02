@@ -9,21 +9,22 @@ import Core.domain.Team;
 import Core.domain.TournamentZone;
 import Core.loader.TournamentData;
 import Core.loader.TournamentLoader;
+import Core.persistance.ChampionshipRepository;
 import Core.simulation.MatchSimulator;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.function.Consumer;
 
 import Core.domain.City;
 import Core.domain.Stadium;
 
-public class Championship {
+import java.io.Serial;
+public class Championship implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final List<TournamentZone> tournamentZones;
     private final List<Match> matches;
     private final List<Team> teams;
@@ -31,8 +32,8 @@ public class Championship {
     private final List<Country> countries;
     private final List<City> cities;
     private final List<Stadium> stadiums;
-    private final Random random;
-    private final MatchSimulator matchSimulator;
+    private transient Random random;
+    private transient MatchSimulator matchSimulator;
 
     public Championship(String jsonPath) throws IOException {
         this(jsonPath, new Random());
@@ -155,15 +156,38 @@ public class Championship {
     public List<City> getCities() {return Collections.unmodifiableList(cities);}
     public List<Stadium> getStadiums() {return Collections.unmodifiableList(stadiums);}
 
+    @Serial
+    private Object readResolve() {
+        this.random = new Random();
+        this.matchSimulator = new MatchSimulator(this.random);
+        return this;
+    }
 
     public static void main(String[] args) throws IOException {
-        Championship championship = new Championship("torneo.json");
-        for (TournamentZone zone : championship.getTournamentZones()) {
-            System.out.println(zone.getName() + ": " + zone.getTeams().stream().map(Team::getName).toList());
+        ChampionshipRepository repository = new ChampionshipRepository();
+        Championship championship = null;
+
+        Scanner scanner = new Scanner(System.in);
+        if (repository.exists()) {
+            System.out.println("==========================================");
+            System.out.println("Se encontró una partida guardada previamente.");
+            System.out.println("1. Continuar torneo guardado");
+            System.out.println("2. Iniciar un nuevo torneo (se sobrescribirá el anterior)");
+            System.out.print("Seleccione una opción: ");
+
+            int opcion = scanner.nextInt();
+            if (opcion == 1) {
+                championship = repository.load();
+            }
+        }
+        if (championship == null) {
+            System.out.println("\nInicializando un nuevo torneo desde torneo.json...");
+            championship = new Championship("torneo.json");
         }
         MatchConsoleReporter reporter = new MatchConsoleReporter();
         championship.simulateGroupStage(reporter::printMatch);
-        System.out.println();
-        System.out.println("Group stage completed. Matches played: " + championship.getMatches().size());
+        System.out.println("\nEstado actual de la Fase de Grupos completado.");
+        repository.save(championship);
+        scanner.close();
     }
 }

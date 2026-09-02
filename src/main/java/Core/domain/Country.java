@@ -1,9 +1,13 @@
 package Core.domain;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Locale;
 import java.util.Objects;
 
-public class Country {
+public class Country implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String name;
 
     public Country(String name) {

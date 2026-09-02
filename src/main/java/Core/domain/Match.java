@@ -1,12 +1,17 @@
 package Core.domain;
 
 import Core.incidents.Incident;
+
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public abstract class Match {
+public abstract class Match implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private LocalDate matchDate;
     private Team homeTeam;
     private Team awayTeam;

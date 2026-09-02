@@ -2,7 +2,12 @@ package Core.incidents;
 
 import Core.domain.Player;
 
-public class RedCard extends Incident {
+import java.io.Serial;
+import java.io.Serializable;
+
+public class RedCard extends Incident implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private Player penalizedPlayer;
 
     public RedCard(int minute, Player penalizedPlayer) {
