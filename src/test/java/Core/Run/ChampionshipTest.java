@@ -38,7 +38,8 @@ public class ChampionshipTest {
         championship.simulateGroupStage();
         for (Match match : championship.getMatches()) {
             require(match.isPlayed(), "Every group match must be played.");
-            require(match.getHomeLineup().size() == 11 && match.getAwayLineup().size() == 11,
+            require(match.getHomeLineup().getPlayers().size() == 11
+                            && match.getAwayLineup().getPlayers().size() == 11,
                     "Every match must have two initial lineups of 11 players.");
             long recordedGoals = match.getIncidents().stream().filter(Goal.class::isInstance).count();
             require(recordedGoals == match.getHomeGoals() + match.getAwayGoals(),

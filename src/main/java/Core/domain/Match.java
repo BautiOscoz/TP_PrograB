@@ -65,7 +65,9 @@ public abstract class Match implements Serializable {
     public Lineup getAwayLineup() { return awayLineup; }
 
     public void setInitialLineups(Lineup homeLineup, Lineup awayLineup) {
-        if (homeLineup == null || awayLineup == null || homeLineup.selectBestLineup().size() != 11 || awayLineup.selectBestLineup().size() != 11) {
+        if (homeLineup == null || awayLineup == null
+                || homeLineup.getPlayers().size() != 11
+                || awayLineup.getPlayers().size() != 11) {
             throw new IllegalArgumentException("Each initial lineup must contain exactly 11 players.");
         }
         this.homeLineup = homeLineup;

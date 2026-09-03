@@ -9,8 +9,8 @@ public class FinalMatch extends Match implements Serializable {
     private static final long serialVersionUID = 1L;
     private boolean settledByPenalties;
 
-    public FinalMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
-        super(matchDate, homeTeam, awayTeam, referee);
+    public FinalMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee,Lineup homeLineup, Lineup awayLineup) {
+        super(matchDate, homeTeam, awayTeam, referee,homeLineup,awayLineup);
         this.settledByPenalties = false;
     }
 

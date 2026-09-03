@@ -19,8 +19,8 @@ public class Lineup implements Serializable {
 
     public Lineup(Team team,FormationType formation) {
         this.team = team;
-        this.players = selectBestLineup();
         this.formation = formation;
+        this.players = selectBestLineup();
     }
     public List<Player> selectBestLineup() {
         List<Player> available = team.getPlayers().stream()
@@ -33,6 +33,11 @@ public class Lineup implements Serializable {
         addByPosition(available, lineupList, Position.DEFENDER, formation.getDefenders());
         addByPosition(available, lineupList, Position.MIDFIELDER, formation.getMidfielders());
         addByPosition(available, lineupList, Position.FORWARD, formation.getForwards());
+
+        available.stream()
+                .filter(player -> !lineupList.contains(player))
+                .limit(11 - lineupList.size())
+                .forEach(lineupList::add);
 
         if (lineupList.size() != 11) {
             throw new IllegalStateException(team.getName() + " does not have enough available players for a " + formation.name() + " lineup.");

@@ -84,7 +84,7 @@ public class Championship implements Serializable {
                     Team home = zoneTeams.get(homeIndex);
                     Team away = zoneTeams.get(awayIndex);
                     generated.add(new GroupMatch(startDate.plusDays(dayOffset++), home, away,
-                            chooseEligibleReferee(home, away)));
+                            chooseEligibleReferee(home, away), null, null));
                 }
             }
         }
@@ -185,7 +185,18 @@ public class Championship implements Serializable {
             championship = new Championship("torneo.json");
         }
         MatchConsoleReporter reporter = new MatchConsoleReporter();
-        championship.simulateGroupStage(reporter::printMatch);
+        long pendingMatches = championship.getMatches().stream()
+                .filter(match -> !match.isPlayed())
+                .count();
+
+        if (pendingMatches > 0) {
+            System.out.println("\nSimulando " + pendingMatches + " partidos pendientes...");
+            championship.simulateGroupStage(reporter::printMatch);
+        } else {
+            System.out.println("\nLa fase de grupos ya estaba completa. Resultados guardados:");
+            championship.getMatches().forEach(reporter::printMatch);
+        }
+
         System.out.println("\nEstado actual de la Fase de Grupos completado.");
         repository.save(championship);
         scanner.close();
