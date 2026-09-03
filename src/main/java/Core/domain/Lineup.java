@@ -3,12 +3,16 @@ package Core.domain;
 import Core.enums.FormationType;
 import Core.enums.Position;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
-public class Lineup {
+public class Lineup implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final Team team;
     private final List<Player> players;
     private final FormationType formation;
