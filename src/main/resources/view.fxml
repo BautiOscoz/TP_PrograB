@@ -1,12 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
-
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.controller">
+<AnchorPane fx:id="rootPane" prefHeight="500.0" prefWidth="750.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.controller">
    <children>
-      <Button fx:id="button" layoutX="100.0" layoutY="121.0" mnemonicParsing="false" text="Button" />
-      <Button fx:id="button2" layoutX="255.0" layoutY="121.0" mnemonicParsing="false" text="Button" />
+
+      <!-- Imagen de fondo que cubre toda la ventana -->
+      <ImageView fx:id="backgroundImage" fitHeight="500.0" fitWidth="750.0" pickOnBounds="true">
+         <image>
+            <Image url="@BackroundImage.jpg" />
+         </image>
+         <cursor>
+            <Cursor fx:constant="DEFAULT" />
+         </cursor>
+      </ImageView>
+
+      <!-- Contenedor VBox centrado -->
+      <VBox alignment="CENTER" fillWidth="false" spacing="16.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="100.0">
+         <children>
+
+            <!-- BOTÓN 1: New Tournament -->
+            <StackPane fx:id="btn1" onMouseClicked="#handleNewTournament" onMouseEntered="#handleMouseEntered" onMouseExited="#handleMouseExited" onMousePressed="#handleMousePressed" onMouseReleased="#handleMouseReleased" styleClass="custom-button">
+               <children>
+                  <Circle fx:id="circle1" radius="250.0" styleClass="transition-circle" />
+                  <Region styleClass="gradient-layer" />
+                  <Label styleClass="button-label" text="New Tournament" />
+               </children>
+            </StackPane>
+
+            <!-- BOTÓN 2: Load Tournament -->
+            <StackPane fx:id="btn2" onMouseClicked="#handleLoadTournament" onMouseEntered="#handleMouseEntered" onMouseExited="#handleMouseExited" onMousePressed="#handleMousePressed" onMouseReleased="#handleMouseReleased" styleClass="custom-button">
+               <children>
+                  <Circle fx:id="circle2" radius="250.0" styleClass="transition-circle" />
+                  <Region styleClass="gradient-layer" />
+                  <Label styleClass="button-label" text="Load Tournament" />
+               </children>
+            </StackPane>
+
+            <!-- BOTÓN 3: Stats -->
+            <StackPane fx:id="btn3" onMouseClicked="#handleStats" onMouseEntered="#handleMouseEntered" onMouseExited="#handleMouseExited" onMousePressed="#handleMousePressed" onMouseReleased="#handleMouseReleased" styleClass="custom-button">
+               <children>
+                  <Circle fx:id="circle3" radius="250.0" styleClass="transition-circle" />
+                  <Region styleClass="gradient-layer" />
+                  <Label styleClass="button-label" text="Stats" />
+               </children>
+            </StackPane>
+
+            <!-- BOTÓN 4: Exit -->
+            <StackPane fx:id="btn4" onMouseClicked="#handleExit" onMouseEntered="#handleMouseEntered" onMouseExited="#handleMouseExited" onMousePressed="#handleMousePressed" onMouseReleased="#handleMouseReleased" styleClass="custom-button">
+               <children>
+                  <Circle fx:id="circle4" radius="250.0" styleClass="transition-circle" />
+                  <Region styleClass="gradient-layer" />
+                  <Label styleClass="button-label" text="Exit" />
+               </children>
+            </StackPane>
+
+         </children>
+      </VBox>
    </children>
 </AnchorPane>
