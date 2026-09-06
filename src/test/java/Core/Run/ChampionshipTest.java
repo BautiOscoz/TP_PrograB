@@ -35,6 +35,19 @@ public class ChampionshipTest {
                     "An assigned referee is not eligible.");
         }
 
+        require(championship.getCurrentMatchday() == 1, "The tournament must start on matchday 1.");
+        championship.simulateNextMatchday();
+        long playedAfterFirstMatchday = championship.getMatches().stream().filter(Match::isPlayed).count();
+        require(playedAfterFirstMatchday == 8, "Exactly eight matches must be played per matchday.");
+        require(championship.getCurrentMatchday() == 2, "Matchday 2 must follow matchday 1.");
+        for (TournamentZone zone : championship.getTournamentZones()) {
+            int totalTeamAppearances = championship.getStandings(zone).stream()
+                    .mapToInt(standing -> standing.getPlayed())
+                    .sum();
+            require(totalTeamAppearances == 4,
+                    "Two matches per zone must produce four team appearances in the standings.");
+        }
+
         championship.simulateGroupStage();
         for (Match match : championship.getMatches()) {
             require(match.isPlayed(), "Every group match must be played.");

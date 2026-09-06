@@ -22,8 +22,8 @@ public class MatchSimulator {
 
     public void simulate(Match match) {
         if (match.isPlayed()) throw new IllegalStateException("The match has already been played.");
-        FormationType homeTactics = FormationType.FOUR_FOUR_TWO;
-        FormationType awayTactics = FormationType.THREE_FIVE_TWO;
+        FormationType homeTactics = chooseRandomValidFormation(match.getHomeTeam());
+        FormationType awayTactics = chooseRandomValidFormation(match.getAwayTeam());
 
         Lineup homeLineup = new Lineup(match.getHomeTeam(), homeTactics);
         Lineup awayLineup = new Lineup(match.getAwayTeam(), awayTactics);
@@ -48,6 +48,20 @@ public class MatchSimulator {
         addSubstitutions(match, match.getAwayTeam(), awayLineup);
 
         match.setPlayed(true);
+    }
+
+    private FormationType chooseRandomValidFormation(Team team) {
+        List<FormationType> validFormations = Arrays.stream(FormationType.values())
+                .filter(formation -> Lineup.canUseFormation(team, formation))
+                .toList();
+
+        if (validFormations.isEmpty()) {
+            throw new IllegalStateException(
+                    team.getName() + " does not have enough available players for any formation."
+            );
+        }
+
+        return validFormations.get(random.nextInt(validFormations.size()));
     }
 
     private int sampleGoals(double rawExpectedGoals) {

@@ -15,7 +15,7 @@ from pathlib import Path
 import html
 
 ROOT = Path(r"C:\Java\TP_PrograB")
-OUTPUT = ROOT / "output" / "pdf" / "guia_completa_tp_prograb.pdf"
+OUTPUT = ROOT / "output" / "pdf" / "guia_completa_actualizada_tp_prograb.pdf"
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 
 pdfmetrics.registerFont(TTFont("Arial", r"C:\Windows\Fonts\arial.ttf"))
@@ -128,7 +128,7 @@ class CoverBlock(Flowable):
         c.setFont("Arial", 11)
         for line in [
             "Copa Internacional de Clubes",
-            "Java 24 · POO · JSON · JDBC · PostgreSQL · JavaFX",
+            "Java 24 - POO - JSON - JDBC - PostgreSQL - JavaFX",
             "Estado documentado: septiembre de 2026",
         ]:
             c.drawString(1.1*cm, y - 0.2*cm, line)
@@ -240,11 +240,11 @@ story.append(matrix([
     ["campeonato.dat", "Estado serializado del torneo", "ChampionshipRepository"],
 ], [3.0*cm, 6.4*cm, 7.0*cm]))
 story.append(Spacer(1, 0.3*cm))
-story.append(status("IMPLEMENTADO", "Flujo de grupos", "Carga JSON, validación, sorteo equilibrado, generación de 24 partidos, árbitros válidos, formaciones, resultados e incidencias."))
+story.append(status("IMPLEMENTADO", "Flujo de grupos", "Carga JSON, validación, sorteo equilibrado, tres jornadas, 24 partidos, árbitros válidos, formaciones aleatorias compatibles, resultados, incidencias y tablas."))
 story.append(Spacer(1, 0.15*cm))
 story.append(status("PARCIAL", "Infraestructura", "La lectura JDBC de ciudades y estadios funciona y Championship puede almacenarlos. El ABM todavía no existe."))
 story.append(Spacer(1, 0.15*cm))
-story.append(status("PENDIENTE", "Competencia completa", "Faltan tabla de posiciones, clasificados, eliminatorias, penales completos, estadios asignados a partidos y reportes."))
+story.append(status("PENDIENTE", "Competencia completa", "Faltan clasificados, eliminatorias funcionales, penales completos, estadios asignados a partidos y reportes generales."))
 
 story.append(h2("El recorrido principal"))
 story.append(code("""
@@ -319,13 +319,13 @@ JSON                       DTO                         DOMINIO
 story.append(h2("Jerarquía de DTO"))
 story.append(code("""
 TournamentRootDto
-└── TournamentDto
-    ├── TeamsDto
-    │   └── TeamDto
-    │       └── SquadDto
-    │           ├── PlayersDto -> PlayerDto -> PersonDto
-    │           └── CoachDto   -> PersonDto
-    └── RefereesDto -> RefereeDto -> PersonDto
++-- TournamentDto
+    +-- TeamsDto
+    |   +-- TeamDto
+    |       +-- SquadDto
+    |           +-- PlayersDto -> PlayerDto -> PersonDto
+    |           +-- CoachDto   -> PersonDto
+    +-- RefereesDto -> RefereeDto -> PersonDto
 """))
 story.append(h2("Adaptador de CountryDto"))
 story.append(p("En el archivo, <font name='Consolas'>pais</font> es un texto, no un objeto. Sin embargo, los DTO ahora usan CountryDto. TournamentLoader registra un adaptador que envuelve ese texto en un DTO."))
@@ -386,9 +386,9 @@ story.append(h2("Person"))
 story.append(p("Person es abstracta: concentra id, nombre, apellido, tipo y número de documento, y fecha de nacimiento. Player, Coach y Referee heredan esos datos. El constructor rechaza nombres vacíos, documentos no válidos y fechas futuras."))
 story.append(code("""
 Person (abstracta, Serializable)
-├── Player
-├── Coach
-└── Referee
++-- Player
++-- Coach
++-- Referee
 """))
 story.append(h2("Country"))
 story.append(p("Country posee solo name, como se decidió para el proyecto. equals y hashCode comparan sin distinguir mayúsculas. También implementa Serializable para formar parte de campeonato.dat."))
@@ -459,10 +459,10 @@ story.append(h1("10. Sorteo equilibrado de zonas"))
 story.append(p("Los 16 equipos se ordenan por ranking y se dividen en cuatro bombos de cuatro. Cada bombo se mezcla y entrega exactamente un equipo a cada zona."))
 story.append(code("""
 Equipos ordenados por ranking
-├── Bombo 1: índices  0..3
-├── Bombo 2: índices  4..7
-├── Bombo 3: índices  8..11
-└── Bombo 4: índices 12..15
++-- Bombo 1: índices  0..3
++-- Bombo 2: índices  4..7
++-- Bombo 3: índices  8..11
++-- Bombo 4: índices 12..15
 
 Cada zona recibe: 1 del Bombo 1 + 1 del Bombo 2
                  + 1 del Bombo 3 + 1 del Bombo 4
@@ -480,20 +480,29 @@ for (int potIndex = 0; potIndex < 4; potIndex++) {
 """))
 story.append(p("Esto cumple simultáneamente aleatoriedad y equilibrio. No pueden quedar cuatro equipos del primer bombo en una misma zona."))
 
-story.append(h1("11. Generación de los 24 partidos"))
-story.append(p("En cada zona de cuatro equipos se recorren pares sin repetir. El segundo índice comienza en homeIndex + 1, por eso no aparecen A vs A ni se duplica A vs B como B vs A."))
+story.append(h1("11. Generación de los 24 partidos por jornadas"))
+story.append(p("Cada zona tiene cuatro equipos, seis encuentros y tres jornadas. El arreglo schedule contiene dos cruces por jornada. El mismo esquema se aplica a las cuatro zonas: 2 partidos por zona multiplicados por 4 zonas producen 8 partidos por fecha y 24 en total."))
 story.append(code("""
-for (int homeIndex = 0; homeIndex < 4; homeIndex++) {
-    for (int awayIndex = homeIndex + 1; awayIndex < 4; awayIndex++) {
-        // crear GroupMatch
+int[][][] schedule = {
+    {{0, 3}, {1, 2}},
+    {{3, 2}, {0, 1}},
+    {{1, 3}, {2, 0}}
+};
+
+for (TournamentZone zone : tournamentZones) {
+    for (int day = 0; day < schedule.length; day++) {
+        for (int[] pairing : schedule[day]) {
+            Team home = zone.getTeams().get(pairing[0]);
+            Team away = zone.getTeams().get(pairing[1]);
+            generated.add(new GroupMatch(
+                startDate.plusDays(day), home, away,
+                chooseEligibleReferee(home, away), day + 1
+            ));
+        }
     }
 }
-
-Pares por zona: 6
-Zonas: 4
-Total: 6 * 4 = 24 partidos
 """))
-story.append(p("Se asigna una fecha consecutiva por partido. Las formaciones se pasan inicialmente como null porque todavía no fueron elegidas: MatchSimulator las crea al comenzar la simulación."))
+story.append(p("GroupMatch guarda matchday entre 1 y 3. Los ocho partidos de una jornada comparten la misma fecha calendario. El constructor ya no recibe Lineup ni null: las alineaciones se crean cuando comienza la simulación, porque las suspensiones pueden cambiar entre fechas."))
 
 story.append(h1("12. Regla de árbitros"))
 story.append(p("Si los clubes son de países distintos, el árbitro no puede compartir nacionalidad con ninguno. Si ambos clubes son del mismo país, se aplica la excepción y cualquier árbitro resulta elegible."))
@@ -511,10 +520,10 @@ story.append(h1("13. Match y sus subtipos"))
 story.append(p("Match es abstracta y reúne el estado común: fecha, local, visitante, árbitro, marcador, incidencias, dos Lineup y el indicador played."))
 story.append(code("""
 Match (abstracta)
-├── GroupMatch
-├── FirstLegMatch
-├── SecondLegMatch
-└── FinalMatch
++-- GroupMatch
++-- FirstLegMatch
++-- SecondLegMatch
++-- FinalMatch
 """))
 story.append(h2("Estado inicial y estado final"))
 story.append(matrix([
@@ -525,24 +534,27 @@ story.append(matrix([
 ], [4.3*cm, 5.0*cm, 3.5*cm, 3.6*cm]))
 story.append(h2("Subtipos eliminatorios"))
 story.append(p("FirstLegMatch, SecondLegMatch y FinalMatch existen y son serializables. SecondLegMatch conserva goles de la ida; SecondLegMatch y FinalMatch tienen settledByPenalties. Aún no hay un servicio que genere cruces, calcule una serie, aplique goles de visitante o ejecute penales. Por eso estas clases son estructura parcial, no eliminatorias funcionales."))
+story.append(h2("Responsabilidad particular de GroupMatch"))
+story.append(p("GroupMatch identifica un partido de zona y añade matchday. Esta propiedad permite filtrar solamente los encuentros de la próxima jornada sin mezclar reglas de calendario dentro de MatchSimulator."))
 
 story.append(h1("14. Lineup y FormationType"))
 story.append(p("FormationType encapsula cantidades de defensores, mediocampistas y delanteros. Actualmente declara 4-3-3, 4-4-2, 3-5-2 y 4-5-1."))
 story.append(h2("Selección"))
 story.extend(bullets([
-    "Filtra jugadores suspendidos mediante serveSuspensionIfNeeded.",
+    "canUseFormation cuenta jugadores no suspendidos por posición.",
+    "Descarta una formación si no puede completar exactamente sus puestos.",
+    "Al construir el once, serveSuspensionIfNeeded excluye al suspendido y limpia su sanción de una fecha.",
     "Ordena los disponibles por valoración promedio, de mayor a menor.",
     "Selecciona un arquero y las cantidades solicitadas por FormationType.",
-    "Si una suspensión impide completar una posición, rellena con los mejores jugadores restantes.",
-    "Si ni siquiera hay once disponibles, lanza IllegalStateException.",
+    "Si el once no contiene exactamente once jugadores, lanza IllegalStateException.",
 ]))
 story.append(code("""
-available.stream()
-    .filter(player -> !lineupList.contains(player))
-    .limit(11 - lineupList.size())
-    .forEach(lineupList::add);
+return goalkeepers >= 1
+    && defenders >= formation.getDefenders()
+    && midfielders >= formation.getMidfielders()
+    && forwards >= formation.getForwards();
 """))
-story.append(info_box("Detalle importante", "El relleno permite que el partido continúe aunque la formación solicitada no pueda cumplirse exactamente. La táctica pasa a ser una preferencia, no una garantía absoluta cuando hay suspendidos."))
+story.append(info_box("Detalle importante", "Lineup ya no rellena puestos con jugadores de otra posición. MatchSimulator elige al azar únicamente entre las formaciones que el plantel disponible puede cumplir."))
 
 story.append(PageBreak())
 story.append(h1("15. MatchSimulator paso a paso"))
@@ -550,12 +562,12 @@ story.append(h2("1 - impedir doble ejecución"))
 story.append(code("if (match.isPlayed()) throw new IllegalStateException(...);"))
 story.append(h2("2 - decidir tácticas"))
 story.append(code("""
-FormationType homeTactics = FormationType.FOUR_FOUR_TWO;
-FormationType awayTactics = FormationType.THREE_FIVE_TWO;
+FormationType homeTactics = chooseRandomValidFormation(home);
+FormationType awayTactics = chooseRandomValidFormation(away);
 Lineup homeLineup = new Lineup(match.getHomeTeam(), homeTactics);
 Lineup awayLineup = new Lineup(match.getAwayTeam(), awayTactics);
 """))
-story.append(p("Actualmente las tácticas están fijas: todos los locales usan 4-4-2 y todos los visitantes 3-5-2. FormationType permite evolucionar luego a una elección por DT o aleatoria."))
+story.append(p("chooseRandomValidFormation recorre FormationType.values(), conserva solamente las opciones admitidas por Lineup.canUseFormation y toma una posición aleatoria. Si la lista queda vacía, informa que el equipo no puede formar un once válido."))
 story.append(h2("3 - fuerza, localía y sorpresa"))
 story.append(code("""
 double homeStrength = home.getCompetitiveStrength() + 3.0;
@@ -587,11 +599,11 @@ story.append(PageBreak())
 story.append(h1("16. Incidencias"))
 story.append(code("""
 Incident (abstracta: minute)
-├── Goal
-├── YellowCard
-├── RedCard
-├── Substitution
-└── PenaltyShootout
++-- Goal
++-- YellowCard
++-- RedCard
++-- Substitution
++-- PenaltyShootout
 """))
 story.append(matrix([
     ["Clase", "Datos", "Estado"],
@@ -605,17 +617,31 @@ story.append(h2("Orden y almacenamiento"))
 story.append(p("Match guarda las incidencias en el orden en que el simulador las crea, no en orden cronológico. MatchConsoleReporter copia la lista y la ordena por minute sin modificar el partido."))
 
 story.append(h1("17. Salida por terminal"))
-story.append(p("MatchConsoleReporter recibe un Match ya terminado. Imprime cabecera, fecha, árbitro, eventos y resultado. El patrón instanceof recupera los datos particulares de cada subtipo."))
+story.append(p("MatchConsoleReporter recibe un Match ya terminado. Imprime cabecera, fecha, árbitro, formación local, formación visitante, eventos y resultado. El patrón instanceof recupera los datos particulares de cada subtipo."))
 story.append(code("""
 if (incident instanceof Goal goal) { ... }
 if (incident instanceof YellowCard card) { ... }
 if (incident instanceof RedCard card) { ... }
 if (incident instanceof Substitution substitution) { ... }
 """))
-story.append(p("Championship usa un Consumer&lt;Match&gt;. Después de simular cada partido, ejecuta afterEachMatch.accept(match). En main se pasa reporter::printMatch, una referencia al método de impresión."))
-story.append(code("championship.simulateGroupStage(reporter::printMatch);"))
-story.append(h2("Partidas ya terminadas"))
-story.append(p("El main cuenta partidos pendientes. Si hay alguno, los simula. Si todos estaban jugados porque se recuperó campeonato.dat, imprime los resultados guardados en vez de terminar silenciosamente."))
+story.append(p("Championship usa un Consumer&lt;Match&gt;. Después de simular cada partido de la fecha ejecuta afterEachMatch.accept(match). En main se pasa reporter::printMatch, una referencia al método de impresión."))
+story.append(code("championship.simulateNextMatchday(reporter::printMatch);"))
+story.append(h2("Tabla después de cada fecha"))
+story.append(p("StandingsConsoleReporter imprime por zona POS, PTS, PJ, PG, PE, PP, GF, GC y DG. Main guarda campeonato.dat después de cada jornada y espera Enter antes de continuar."))
+story.append(h2("TeamStanding y cálculo de posiciones"))
+story.append(p("TeamStanding representa la fila de un equipo: puntos, partidos jugados, victorias, empates, derrotas, goles a favor y en contra. registerMatch suma 3 puntos por victoria, 1 por empate y 0 por derrota."))
+story.append(code("""
+if (scoredGoals > concededGoals) {
+    won++;
+    points += 3;
+} else if (scoredGoals == concededGoals) {
+    drawn++;
+    points++;
+} else {
+    lost++;
+}
+"""))
+story.append(p("Championship.getStandings(zone) reconstruye la tabla desde los GroupMatch ya jugados. No guarda puntos duplicados: crea cuatro TeamStanding nuevos, registra cada resultado una sola vez y ordena por puntos, diferencia de gol, goles a favor y ranking."))
 
 story.append(PageBreak())
 story.append(h1("18. Persistencia por serialización"))
@@ -629,17 +655,18 @@ try (ObjectOutputStream out =
 story.append(h2("Por qué tantas clases implementan Serializable"))
 story.append(p("Al guardar Championship, Java recorre todas sus referencias: zonas, equipos, personas, partidos, formaciones, incidencias, ciudades y estadios. Cada objeto alcanzable debe ser serializable o estar marcado transient."))
 story.append(h2("Random y MatchSimulator son transient"))
-story.append(p("Esos objetos se excluyen del archivo. readResolve los reconstruye después de cargar para que el campeonato recuperado pueda seguir simulando."))
+story.append(p("Esos objetos se excluyen del archivo. readResolve los reconstruye después de cargar para que el campeonato recuperado pueda seguir simulando. También restaura matchday en archivos antiguos, donde el nuevo campo se deserializa inicialmente con valor cero."))
 story.append(code("""
 @Serial
 private Object readResolve() {
     this.random = new Random();
     this.matchSimulator = new MatchSimulator(this.random);
+    restoreMissingMatchdays();
     return this;
 }
 """))
 story.append(h2("Decisión del main"))
-story.append(p("Si existe campeonato.dat, el usuario elige continuar o crear uno nuevo. La opción nueva reemplazará el archivo al guardar. La persistencia cumple parcialmente la consigna: conserva el estado, pero el flujo actual simula toda la fase de grupos de una vez, por lo que aún no se observa una pausa natural entre partidos."))
+story.append(p("Si existe campeonato.dat, el usuario elige continuar o crear uno nuevo. getCurrentMatchday busca la menor jornada que todavía tenga partidos pendientes. Después de jugar sus ocho encuentros, se guardan resultados y se espera Enter. Si el programa se cierra, la próxima ejecución continúa desde la siguiente fecha pendiente."))
 
 story.append(h1("19. PostgreSQL y JDBC"))
 story.append(h2("Modelo relacional observado"))
@@ -647,13 +674,13 @@ story.append(code("""
 PAIS
   id BIGINT (PK)
   nombre
-    │
-    └── CIUDAD
+    |
+    +-- CIUDAD
           id BIGINT (PK)
           nombre
           id_pais (FK -> pais.id)
-              │
-              └── ESTADIO
+              |
+              +-- ESTADIO
                     id BIGINT (PK)
                     nombre
                     ciudad (FK -> ciudad.id)
@@ -785,8 +812,10 @@ story.append(matrix([
     ["Formaciones", "Implementado", "Lineup + FormationType"],
     ["Goles, cambios y expulsiones", "Implementado", "Incident subclasses + simulator"],
     ["Suspensión de una fecha", "Implementado", "isSuspended + serveSuspensionIfNeeded"],
-    ["Tabla antes/después", "Pendiente", "No existe TeamStanding"],
-    ["Desempates y clasificados", "Pendiente", "No existe cálculo de posiciones"],
+    ["Simulación por fechas", "Implementado", "3 jornadas de 8 partidos"],
+    ["Tabla después de cada fecha", "Implementado", "TeamStanding + StandingsConsoleReporter"],
+    ["Desempates de tabla", "Parcial", "Puntos, DG, GF y ranking; falta resultado entre ambos"],
+    ["Clasificados", "Pendiente", "Todavía no se seleccionan los dos primeros"],
     ["Cuartos/semis/final", "Parcial", "Clases creadas; flujo no implementado"],
     ["Definición por penales", "Parcial", "Clase insuficiente; no hay algoritmo"],
     ["Estadios desde BD", "Parcial", "Lectura e integración completas"],
@@ -800,7 +829,7 @@ story.append(matrix([
 story.append(h1("27. Riesgos y puntos a mejorar"))
 story.extend(bullets([
     "La estadística del mapa Player.statistics pertenece al archivo original; no se actualiza con los partidos simulados.",
-    "Las tácticas local/visitante están fijas y no dependen del DT.",
+    "Las tácticas ahora son aleatorias entre las formaciones posibles, pero todavía no dependen del DT.",
     "Los incidentes pueden ser cronológicamente incoherentes entre sí porque se generan por grupos y luego solo se ordenan para imprimir.",
     "Una roja puede aparecer antes de un gol o cambio del mismo jugador porque no existe un motor minuto a minuto.",
     "Match no guarda Stadium, por lo que todavía no puede cumplir la regla de eliminatorias.",
@@ -814,7 +843,7 @@ story.extend(bullets([
 story.append(PageBreak())
 story.append(h1("28. Cómo ejecutar y qué esperar"))
 story.append(h2("Championship"))
-story.append(p("Ejecutar Core.Run.Championship. Si existe campeonato.dat, elegir 1 para continuar o 2 para crear un torneo nuevo. Un torneo nuevo simula y muestra 24 partidos. Uno ya completo vuelve a imprimir sus resultados guardados."))
+story.append(p("Ejecutar Core.Run.Championship. Si existe campeonato.dat, elegir 1 para continuar o 2 para crear un torneo nuevo. El programa juega ocho partidos, muestra las cuatro tablas, guarda el estado y espera Enter antes de avanzar. Uno ya completo vuelve a imprimir resultados y posiciones guardadas."))
 story.append(h2("DatabaseTest"))
 story.append(p("Ejecutar Infrastructure.database.DatabaseTest con CHAMPIONSHIP_DB_PASSWORD configurada. Debe mostrar conexión correcta y el catálogo Championship."))
 story.append(h2("CityRepositoryTest y StadiumRepositoryTest"))
@@ -830,23 +859,22 @@ story.extend(bullets([
     "1. torneo.json y los DTO: qué datos entran.",
     "2. TournamentLoader y TournamentValidator: cómo se convierten y validan.",
     "3. Country, Person, Player, Coach, Referee y Team: qué representa cada objeto.",
-    "4. Championship.drawBalancedZones y generateGroupMatches: cómo nace el calendario.",
+    "4. Championship.drawBalancedZones y generateGroupMatches: cómo nacen zonas, jornadas y calendario.",
     "5. FormationType y Lineup: cómo se eligen once jugadores.",
     "6. MatchSimulator: cómo se decide el resultado.",
-    "7. Incident y MatchConsoleReporter: cómo se guarda y presenta lo ocurrido.",
-    "8. ChampionshipRepository: cómo se conserva el estado.",
-    "9. DatabaseConnection, CityRepository y StadiumRepository: cómo entra PostgreSQL.",
-    "10. GUI y Controller: punto de partida de la futura interfaz.",
+    "7. TeamStanding y getStandings: cómo se calculan y ordenan las posiciones.",
+    "8. Incident, MatchConsoleReporter y StandingsConsoleReporter: cómo se presenta lo ocurrido.",
+    "9. ChampionshipRepository: cómo se conserva el estado entre fechas.",
+    "10. DatabaseConnection, CityRepository y StadiumRepository: cómo entra PostgreSQL.",
+    "11. GUI y Controller: punto de partida de la futura interfaz.",
 ]))
 
 story.append(PageBreak())
 story.append(h1("30. Próxima evolución recomendada"))
-story.append(h2("Primero: tabla de posiciones"))
+story.append(h2("Primero: completar clasificación"))
 story.extend(bullets([
-    "Crear TeamStanding con puntos, PJ, PG, PE, PP, GF y GC.",
-    "Actualizarla luego de cada GroupMatch.",
-    "Ordenar por puntos, diferencia, goles a favor y resultado entre ambos.",
-    "Mostrar la tabla antes y después de cada partido.",
+    "Agregar el resultado entre ambos como criterio de desempate si la consigna lo exige.",
+    "Decidir si la tabla debe mostrarse también antes de cada partido o solamente después de la jornada.",
     "Obtener dos clasificados por zona.",
 ]))
 story.append(h2("Segundo: eliminatorias y estadios"))

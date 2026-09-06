@@ -1,9 +1,9 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-root = Path(r"C:\Java\TP_PrograB\tmp\pdfs\rendered")
+root = Path(r"C:\Java\TP_PrograB\tmp\pdfs\rendered_final")
 pages = sorted(root.glob("page-*.png"))
-out = root.parent / "contact_sheets"
+out = root.parent / "contact_sheets_final"
 out.mkdir(parents=True, exist_ok=True)
 
 for batch_index in range(0, len(pages), 4):

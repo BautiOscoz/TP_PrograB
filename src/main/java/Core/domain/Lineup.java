@@ -22,6 +22,26 @@ public class Lineup implements Serializable {
         this.formation = formation;
         this.players = selectBestLineup();
     }
+
+    public static boolean canUseFormation(Team team, FormationType formation) {
+        long goalkeepers = countAvailableByPosition(team, Position.GOALKEEPER);
+        long defenders = countAvailableByPosition(team, Position.DEFENDER);
+        long midfielders = countAvailableByPosition(team, Position.MIDFIELDER);
+        long forwards = countAvailableByPosition(team, Position.FORWARD);
+
+        return goalkeepers >= 1
+                && defenders >= formation.getDefenders()
+                && midfielders >= formation.getMidfielders()
+                && forwards >= formation.getForwards();
+    }
+
+    private static long countAvailableByPosition(Team team, Position position) {
+        return team.getPlayers().stream()
+                .filter(player -> !player.isSuspended())
+                .filter(player -> player.getPosition() == position)
+                .count();
+    }
+
     public List<Player> selectBestLineup() {
         List<Player> available = team.getPlayers().stream()
                 .filter(player -> !player.serveSuspensionIfNeeded())
@@ -33,11 +53,6 @@ public class Lineup implements Serializable {
         addByPosition(available, lineupList, Position.DEFENDER, formation.getDefenders());
         addByPosition(available, lineupList, Position.MIDFIELDER, formation.getMidfielders());
         addByPosition(available, lineupList, Position.FORWARD, formation.getForwards());
-
-        available.stream()
-                .filter(player -> !lineupList.contains(player))
-                .limit(11 - lineupList.size())
-                .forEach(lineupList::add);
 
         if (lineupList.size() != 11) {
             throw new IllegalStateException(team.getName() + " does not have enough available players for a " + formation.name() + " lineup.");
@@ -53,6 +68,10 @@ public class Lineup implements Serializable {
 
     public List<Player> getPlayers() {
         return players;
+    }
+
+    public FormationType getFormation() {
+        return formation;
     }
 
     public Player getRandomPlayer(Random random) {

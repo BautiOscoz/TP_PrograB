@@ -23,6 +23,8 @@ public class MatchConsoleReporter {
         System.out.println(match.getHomeTeam().getName() + " vs " + match.getAwayTeam().getName());
         System.out.println("Date: " + match.getMatchDate().format(DATE_FORMAT));
         System.out.println("Referee: " + fullName(match.getReferee()));
+        System.out.println("Home formation: " + match.getHomeLineup().getFormation());
+        System.out.println("Away formation: " + match.getAwayLineup().getFormation());
         System.out.println("------------------------------------------------------------");
         System.out.println("MATCH EVENTS");
 
