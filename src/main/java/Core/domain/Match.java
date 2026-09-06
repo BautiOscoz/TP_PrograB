@@ -23,7 +23,7 @@ public abstract class Match implements Serializable {
     private Lineup awayLineup;
     private boolean played;
 
-    public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee,Lineup homeLineup, Lineup awayLineup) {
+    public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
         this.matchDate = matchDate;
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
@@ -31,8 +31,6 @@ public abstract class Match implements Serializable {
         this.homeGoals = 0;
         this.awayGoals = 0;
         this.incidents = new ArrayList<>();
-        this.homeLineup = homeLineup;
-        this.awayLineup = awayLineup;
         this.played = false;
     }
 

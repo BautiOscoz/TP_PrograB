@@ -1,10 +1,8 @@
-/* Botón principal estilo 'Tournament' */
 .custom-button {
     -fx-font-size: 15px;
     -fx-pref-width: 270px;            /* Ancho controlado y cómodo */
     -fx-pref-height: 48px;             /* Altura proporcionada */
 
-    /* Fondo azul oscuro estadio con borde dorado */
     -fx-background-color: #0d1b2a;
     -fx-border-color: #d4af37;
     -fx-border-width: 1.5px;
@@ -12,18 +10,15 @@
     -fx-background-radius: 0.6em;
     -fx-cursor: hand;
 
-    /* Sombra exterior sutil dorada/oscura */
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.7), 10, 0, 0, 4);
 }
 
-/* Texto del botón (Dorado Claro/Blanco) */
 .button-label {
     -fx-text-fill: #fef08a;
     -fx-font-weight: bold;
     -fx-letter-spacing: 1px;
 }
 
-/* Degradado superior de sombra estilo estadio */
 .gradient-layer {
     -fx-background-color: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
     -fx-background-radius: 0.6em;
@@ -31,7 +26,6 @@
     -fx-max-height: infinity;
 }
 
-/* Círculo animado en tono Dorado Brillante (Trofeo) */
 .transition-circle {
     -fx-fill: linear-gradient(to right, #f59e0b, #fbbf24);
     -fx-scale-x: 0;

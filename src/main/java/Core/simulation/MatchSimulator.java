@@ -20,10 +20,25 @@ public class MatchSimulator {
         this.random = random;
     }
 
+
+    private FormationType chooseRandomFormation(Team team){
+        List<FormationType> validFormation= Arrays.stream(FormationType.values())
+                .filter(formation-> Lineup.canUseFormation(team,formation)).toList();
+
+        if(validFormation.isEmpty())
+            throw new IllegalStateException(team.getName()+"Doesnt have enougth player for any formation");
+
+        int randomPosition= random.nextInt(validFormation.size());
+        return validFormation.get(randomPosition);
+
+    }
+
     public void simulate(Match match) {
+
         if (match.isPlayed()) throw new IllegalStateException("The match has already been played.");
-        FormationType homeTactics = FormationType.FOUR_FOUR_TWO;
-        FormationType awayTactics = FormationType.THREE_FIVE_TWO;
+
+        FormationType homeTactics = chooseRandomFormation(match.getHomeTeam());
+        FormationType awayTactics = chooseRandomFormation(match.getAwayTeam());
 
         Lineup homeLineup = new Lineup(match.getHomeTeam(), homeTactics);
         Lineup awayLineup = new Lineup(match.getAwayTeam(), awayTactics);

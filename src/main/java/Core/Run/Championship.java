@@ -11,6 +11,7 @@ import Core.loader.TournamentData;
 import Core.loader.TournamentLoader;
 import Core.persistance.ChampionshipRepository;
 import Core.simulation.MatchSimulator;
+import Core.domain.TeamStanding;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -20,6 +21,9 @@ import java.util.function.Consumer;
 
 import Core.domain.City;
 import Core.domain.Stadium;
+
+import Core.console.MatchConsoleReporter;
+import Core.console.StandingsConsoleReporter;
 
 import java.io.Serial;
 public class Championship implements Serializable {
@@ -74,17 +78,50 @@ public class Championship implements Serializable {
         return zones;
     }
 
-    private List<Match> generateGroupMatches(LocalDate startDate) {
+    private List<Match> generateGroupMatches(
+            LocalDate startDate
+    ) {
         List<Match> generated = new ArrayList<>();
-        int dayOffset = 0;
+
+        int[][][] schedule = {
+                {
+                        {0, 3},
+                        {1, 2}
+                },
+                {
+                        {3, 2},
+                        {0, 1}
+                },
+                {
+                        {1, 3},
+                        {2, 0}
+                }
+        };
+
         for (TournamentZone zone : tournamentZones) {
             List<Team> zoneTeams = zone.getTeams();
-            for (int homeIndex = 0; homeIndex < zoneTeams.size(); homeIndex++) {
-                for (int awayIndex = homeIndex + 1; awayIndex < zoneTeams.size(); awayIndex++) {
-                    Team home = zoneTeams.get(homeIndex);
-                    Team away = zoneTeams.get(awayIndex);
-                    generated.add(new GroupMatch(startDate.plusDays(dayOffset++), home, away,
-                            chooseEligibleReferee(home, away), null, null));
+
+            for (
+                    int matchdayIndex = 0;
+                    matchdayIndex < schedule.length;
+                    matchdayIndex++
+            ) {
+                for (int[] pairing : schedule[matchdayIndex]) {
+                    Team home =
+                            zoneTeams.get(pairing[0]);
+
+                    Team away =
+                            zoneTeams.get(pairing[1]);
+
+                    generated.add(
+                            new GroupMatch(
+                                    startDate.plusDays(matchdayIndex),
+                                    home,
+                                    away,
+                                    chooseEligibleReferee(home, away),
+                                    matchdayIndex + 1
+                            )
+                    );
                 }
             }
         }
@@ -106,17 +143,118 @@ public class Championship implements Serializable {
                 && !referee.getNationality().equals(away.getCountry());
     }
 
+    public int getCurrentMatchday() {
+        return matches.stream()
+                .filter(GroupMatch.class::isInstance)
+                .map(GroupMatch.class::cast)
+                .filter(match -> !match.isPlayed())
+                .mapToInt(GroupMatch::getMatchday)
+                .min()
+                .orElse(0);
+    }
+
+    public boolean hasPendingGroupMatchdays() {
+        return getCurrentMatchday() != 0;
+    }
+
     public void simulateGroupStage() {
         simulateGroupStage(match -> { });
     }
 
-    public void simulateGroupStage(Consumer<Match> afterEachMatch) {
-        for (Match match : matches) {
-            if (!match.isPlayed()) {
-                matchSimulator.simulate(match);
-                afterEachMatch.accept(match);
-            }
+    public void simulateGroupStage(
+            Consumer<Match> afterEachMatch
+    ) {
+        while (hasPendingGroupMatchdays()) {
+            simulateNextMatchday(afterEachMatch);
         }
+    }
+
+    public void simulateNextMatchday() {
+        simulateNextMatchday(match -> { });
+    }
+
+    public void simulateNextMatchday(
+            Consumer<Match> afterEachMatch
+    ) {
+        int matchday = getCurrentMatchday();
+        if (matchday == 0) {
+            return;
+        }
+        matches.stream()
+                .filter(GroupMatch.class::isInstance)
+                .map(GroupMatch.class::cast)
+                .filter(match ->
+                        match.getMatchday() == matchday
+                )
+                .filter(match -> !match.isPlayed())
+                .forEach(match -> {
+                    matchSimulator.simulate(match);
+                    afterEachMatch.accept(match);
+                });
+    }
+
+    public List<TeamStanding> getStandings(TournamentZone zone){
+        Map<Team,TeamStanding> standings= new LinkedHashMap<>();
+        zone.getTeams().forEach(team->standings.put(team,new TeamStanding(team)));
+        matches.stream()
+                .filter(GroupMatch.class::isInstance)
+                .map(GroupMatch.class::cast)
+                .filter(Match::isPlayed)
+                .filter(match ->
+                        standings.containsKey(match.getHomeTeam())
+                                && standings.containsKey(
+                                match.getAwayTeam()
+                        )
+                )
+                .forEach(match -> {
+                    TeamStanding homeStanding =
+                            standings.get(match.getHomeTeam());
+
+                    TeamStanding awayStanding =
+                            standings.get(match.getAwayTeam());
+
+                    homeStanding.registerMatch(
+                            match.getHomeGoals(),
+                            match.getAwayGoals()
+                    );
+
+                    awayStanding.registerMatch(
+                            match.getAwayGoals(),
+                            match.getHomeGoals()
+                    );
+                });
+
+        return standings.values().stream()
+                .sorted(
+                        Comparator
+                                .comparingInt(
+                                        TeamStanding::getPoints
+                                )
+                                .reversed()
+                                .thenComparing(
+                                        Comparator
+                                                .comparingInt(
+                                                        TeamStanding
+                                                                ::getGoalDifference
+                                                )
+                                                .reversed()
+                                )
+                                .thenComparing(
+                                        Comparator
+                                                .comparingInt(
+                                                        TeamStanding
+                                                                ::getGoalsFor
+                                                )
+                                                .reversed()
+                                )
+                                .thenComparingInt(
+                                        standing ->
+                                                standing
+                                                        .getTeam()
+                                                        .getRanking()
+                                )
+                )
+                .toList();
     }
 
     public void loadVenues(List<City> cities, List<Stadium> stadiums) {
@@ -160,7 +298,98 @@ public class Championship implements Serializable {
     private Object readResolve() {
         this.random = new Random();
         this.matchSimulator = new MatchSimulator(this.random);
+        restoreMissingMatchdays();
         return this;
+    }
+
+    private void restoreMissingMatchdays() {
+        matches.stream()
+                .filter(GroupMatch.class::isInstance)
+                .map(GroupMatch.class::cast)
+                .filter(match ->
+                        match.getMatchday() == 0
+                )
+                .forEach(match ->
+                        match.setMatchday(
+                                findMatchday(match)
+                        )
+                );
+    }
+
+    private int findMatchday(GroupMatch match) {
+        TournamentZone zone =
+                tournamentZones.stream()
+                        .filter(candidate ->
+                                candidate
+                                        .getTeams()
+                                        .contains(
+                                                match.getHomeTeam()
+                                        )
+                                        &&
+                                        candidate
+                                                .getTeams()
+                                                .contains(
+                                                        match.getAwayTeam()
+                                                )
+                        )
+                        .findFirst()
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Could not find the zone "
+                                                + "for a saved match."
+                                )
+                        );
+
+        int homeIndex =
+                zone.getTeams().indexOf(
+                        match.getHomeTeam()
+                );
+
+        int awayIndex =
+                zone.getTeams().indexOf(
+                        match.getAwayTeam()
+                );
+
+        if (
+                isPair(homeIndex, awayIndex, 0, 3)
+                        || isPair(
+                        homeIndex,
+                        awayIndex,
+                        1,
+                        2
+                )
+        ) {
+            return 1;
+        }
+
+        if (
+                isPair(homeIndex, awayIndex, 3, 2)
+                        || isPair(
+                        homeIndex,
+                        awayIndex,
+                        0,
+                        1
+                )
+        ) {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    private boolean isPair(
+            int first,
+            int second,
+            int expectedFirst,
+            int expectedSecond
+    ) {
+        return (
+                first == expectedFirst
+                        && second == expectedSecond
+        ) || (
+                first == expectedSecond
+                        && second == expectedFirst
+        );
     }
 
     public static void main(String[] args) throws IOException {
@@ -176,6 +405,7 @@ public class Championship implements Serializable {
             System.out.print("Seleccione una opción: ");
 
             int opcion = scanner.nextInt();
+            scanner.nextLine();
             if (opcion == 1) {
                 championship = repository.load();
             }
@@ -184,20 +414,80 @@ public class Championship implements Serializable {
             System.out.println("\nInicializando un nuevo torneo desde torneo.json...");
             championship = new Championship("torneo.json");
         }
-        MatchConsoleReporter reporter = new MatchConsoleReporter();
-        long pendingMatches = championship.getMatches().stream()
-                .filter(match -> !match.isPlayed())
-                .count();
+        MatchConsoleReporter matchReporter =
+                new MatchConsoleReporter();
 
-        if (pendingMatches > 0) {
-            System.out.println("\nSimulando " + pendingMatches + " partidos pendientes...");
-            championship.simulateGroupStage(reporter::printMatch);
+        StandingsConsoleReporter standingsReporter =
+                new StandingsConsoleReporter();
+
+        if (championship.hasPendingGroupMatchdays()) {
+
+            while (championship.hasPendingGroupMatchdays()) {
+                int matchday =
+                        championship.getCurrentMatchday();
+
+                System.out.println();
+                System.out.println(
+                        "================ MATCHDAY "
+                                + matchday
+                                + " ================"
+                );
+
+                championship.simulateNextMatchday(
+                        matchReporter::printMatch
+                );
+
+                for (
+                        TournamentZone zone
+                        : championship.getTournamentZones()
+                ) {
+                    standingsReporter.printZone(
+                            zone,
+                            championship.getStandings(zone)
+                    );
+                }
+
+                repository.save(championship);
+
+                if (championship.hasPendingGroupMatchdays()) {
+                    System.out.print(
+                            "\nPress Enter to simulate "
+                                    + "the next matchday..."
+                    );
+
+                    scanner.nextLine();
+                }
+            }
+
         } else {
-            System.out.println("\nLa fase de grupos ya estaba completa. Resultados guardados:");
-            championship.getMatches().forEach(reporter::printMatch);
+            System.out.println();
+            System.out.println(
+                    "La fase de grupos ya estaba completa."
+            );
+
+            System.out.println(
+                    "Resultados y posiciones guardadas:"
+            );
+
+            championship.getMatches()
+                    .forEach(matchReporter::printMatch);
+
+            for (
+                    TournamentZone zone
+                    : championship.getTournamentZones()
+            ) {
+                standingsReporter.printZone(
+                        zone,
+                        championship.getStandings(zone)
+                );
+            }
         }
 
-        System.out.println("\nEstado actual de la Fase de Grupos completado.");
+        System.out.println();
+        System.out.println(
+                "Estado actual de la fase de grupos guardado."
+        );
+
         repository.save(championship);
         scanner.close();
     }
