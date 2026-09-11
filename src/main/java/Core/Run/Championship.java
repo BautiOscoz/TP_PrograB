@@ -1,26 +1,18 @@
 package Core.Run;
 
 import Core.console.MatchConsoleReporter;
-import Core.domain.Country;
-import Core.domain.GroupMatch;
-import Core.domain.Match;
-import Core.domain.Referee;
-import Core.domain.Team;
-import Core.domain.TournamentZone;
+import Core.domain.*;
+import Core.incidents.PenaltyShootout;
 import Core.loader.TournamentData;
 import Core.loader.TournamentLoader;
 import Core.persistance.ChampionshipRepository;
 import Core.simulation.MatchSimulator;
-import Core.domain.TeamStanding;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Consumer;
-
-import Core.domain.City;
-import Core.domain.Stadium;
 
 import Core.console.MatchConsoleReporter;
 import Core.console.StandingsConsoleReporter;
@@ -392,6 +384,410 @@ public class Championship implements Serializable {
         );
     }
 
+    private Team simulateSeries(
+            Team firstTeam,
+            Team secondTeam,
+            LocalDate firstLegDate
+    ) {
+        FirstLegMatch firstLeg = new FirstLegMatch(
+                firstLegDate,
+                firstTeam,
+                secondTeam,
+                chooseEligibleReferee(firstTeam, secondTeam)
+        );
+
+        matches.add(firstLeg);
+        matchSimulator.simulate(firstLeg);
+
+        SecondLegMatch secondLeg = new SecondLegMatch(
+                firstLegDate.plusDays(7),
+                secondTeam,
+                firstTeam,
+                chooseEligibleReferee(secondTeam, firstTeam),
+                firstLeg.getHomeGoals(),
+                firstLeg.getAwayGoals()
+        );
+
+        matches.add(secondLeg);
+        matchSimulator.simulate(secondLeg);
+
+        return determineSeriesWinner(firstLeg, secondLeg);
+    }
+
+    private int getMatchPoints(
+            int goalsFor,
+            int goalsAgainst
+    ) {
+        if (goalsFor > goalsAgainst) {
+            return 3;
+        }
+
+        if (goalsFor == goalsAgainst) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+
+    private int getSeriesPoints(
+            FirstLegMatch firstLeg,
+            SecondLegMatch secondLeg,
+            Team team
+    ) {
+        if (team.equals(firstLeg.getHomeTeam())) {
+
+            int firstLegPoints = getMatchPoints(
+                    firstLeg.getHomeGoals(),
+                    firstLeg.getAwayGoals()
+            );
+
+            int secondLegPoints = getMatchPoints(
+                    secondLeg.getAwayGoals(),
+                    secondLeg.getHomeGoals()
+            );
+
+            return firstLegPoints + secondLegPoints;
+        }
+
+        if (team.equals(firstLeg.getAwayTeam())) {
+
+            int firstLegPoints = getMatchPoints(
+                    firstLeg.getAwayGoals(),
+                    firstLeg.getHomeGoals()
+            );
+
+            int secondLegPoints = getMatchPoints(
+                    secondLeg.getHomeGoals(),
+                    secondLeg.getAwayGoals()
+            );
+
+            return firstLegPoints + secondLegPoints;
+        }
+
+        throw new IllegalArgumentException(
+                "Team does not belong to this series."
+        );
+    }
+
+    private int getWeightedGoalDifference(
+            FirstLegMatch firstLeg,
+            SecondLegMatch secondLeg,
+            Team team
+    ) {
+        Team teamA = firstLeg.getHomeTeam();
+        Team teamB = firstLeg.getAwayTeam();
+
+        if (team.equals(teamA)) {
+
+            int goalsFor =
+                    firstLeg.getHomeGoals()
+                            + secondLeg.getAwayGoals() * 2;
+
+            int goalsAgainst =
+                    firstLeg.getAwayGoals() * 2
+                            + secondLeg.getHomeGoals();
+
+            return goalsFor - goalsAgainst;
+        }
+
+        if (team.equals(teamB)) {
+
+            int goalsFor =
+                    firstLeg.getAwayGoals() * 2
+                            + secondLeg.getHomeGoals();
+
+            int goalsAgainst =
+                    firstLeg.getHomeGoals()
+                            + secondLeg.getAwayGoals() * 2;
+
+            return goalsFor - goalsAgainst;
+        }
+
+        throw new IllegalArgumentException(
+                "Team does not belong to this series."
+        );
+    }
+
+    private Team determineSeriesWinner(
+            FirstLegMatch firstLeg,
+            SecondLegMatch secondLeg
+    ) {
+        Team teamA = firstLeg.getHomeTeam();
+        Team teamB = firstLeg.getAwayTeam();
+
+        int teamAPoints =
+                getSeriesPoints(firstLeg, secondLeg, teamA);
+
+        int teamBPoints =
+                getSeriesPoints(firstLeg, secondLeg, teamB);
+
+        // 1. Puntos
+        if (teamAPoints > teamBPoints) {
+            return teamA;
+        }
+
+        if (teamBPoints > teamAPoints) {
+            return teamB;
+        }
+
+        // 2. Diferencia de gol con visitante doble
+        int teamAGoalDifference =
+                getWeightedGoalDifference(
+                        firstLeg,
+                        secondLeg,
+                        teamA
+                );
+
+        int teamBGoalDifference =
+                getWeightedGoalDifference(
+                        firstLeg,
+                        secondLeg,
+                        teamB
+                );
+
+        if (teamAGoalDifference > teamBGoalDifference) {
+            return teamA;
+        }
+
+        if (teamBGoalDifference > teamAGoalDifference) {
+            return teamB;
+        }
+
+        // 3. Penales
+        return determinePenaltyShootoutWinner(secondLeg);
+    }
+
+    private Team determinePenaltyShootoutWinner(
+            Match match
+    ) {
+        Team homeTeam = match.getHomeTeam();
+        Team awayTeam = match.getAwayTeam();
+
+        List<Player> homePlayers =
+                match.getHomeLineup().getPlayers();
+
+        List<Player> awayPlayers =
+                match.getAwayLineup().getPlayers();
+
+        int homeScore = 0;
+        int awayScore = 0;
+
+
+        // Cinco penales iniciales
+        for (int i = 0; i < 5; i++) {
+
+            if (simulatePenalty(
+                    match,
+                    homePlayers.get(i)
+            )) {
+                homeScore++;
+            }
+
+            if (simulatePenalty(
+                    match,
+                    awayPlayers.get(i)
+            )) {
+                awayScore++;
+            }
+        }
+
+        if (homeScore > awayScore) {
+            return homeTeam;
+        }
+
+        if (awayScore > homeScore) {
+            return awayTeam;
+        }
+
+        // Muerte súbita
+        int kickerIndex = 5;
+
+        while (true) {
+
+            boolean homeScored =
+                    simulatePenalty(
+                            match,
+                            homePlayers.get(
+                                    kickerIndex
+                                            % homePlayers.size()
+                            )
+                    );
+
+            boolean awayScored =
+                    simulatePenalty(
+                            match,
+                            awayPlayers.get(
+                                    kickerIndex
+                                            % awayPlayers.size()
+                            )
+                    );
+
+            if (homeScored && !awayScored) {
+                return homeTeam;
+            }
+
+            if (!homeScored && awayScored) {
+                return awayTeam;
+            }
+
+            kickerIndex++;
+        }
+    }
+
+    private boolean simulatePenalty(
+            Match match,
+            Player player
+    ) {
+        boolean scored =
+                random.nextDouble() < 0.75;
+
+        match.addIncident(
+                new PenaltyShootout(
+                        90,
+                        player,
+                        scored
+                )
+        );
+
+        return scored;
+    }
+
+    private Team getFirst(TournamentZone zone) {
+        return getStandings(zone)
+                .get(0)
+                .getTeam();
+    }
+
+    private Team getSecond(TournamentZone zone) {
+        return getStandings(zone)
+                .get(1)
+                .getTeam();
+    }
+
+    public List<Team> simulateQuarterFinals(
+            LocalDate startDate
+    ) {
+        if (hasPendingGroupMatchdays()) {
+            throw new IllegalStateException(
+                    "Group stage must be completed first."
+            );
+        }
+
+        TournamentZone zoneA = tournamentZones.get(0);
+        TournamentZone zoneB = tournamentZones.get(1);
+        TournamentZone zoneC = tournamentZones.get(2);
+        TournamentZone zoneD = tournamentZones.get(3);
+
+        List<Team> winners = new ArrayList<>();
+
+        Team winner1 = simulateSeries(
+                getFirst(zoneA),
+                getSecond(zoneD),
+                startDate
+        );
+
+        Team winner2 = simulateSeries(
+                getFirst(zoneB),
+                getSecond(zoneC),
+                startDate
+        );
+
+        Team winner3 = simulateSeries(
+                getFirst(zoneC),
+                getSecond(zoneA),
+                startDate
+        );
+
+        Team winner4 = simulateSeries(
+                getFirst(zoneD),
+                getSecond(zoneB),
+                startDate
+        );
+
+        winners.add(winner1);
+        winners.add(winner2);
+        winners.add(winner3);
+        winners.add(winner4);
+
+        return winners;
+    }
+
+    public List<Team> simulateSemiFinals(
+            List<Team> quarterFinalWinners,
+            LocalDate startDate
+    ) {
+        if (quarterFinalWinners.size() != 4) {
+            throw new IllegalArgumentException(
+                    "Four quarter-final winners are required."
+            );
+        }
+
+        List<Team> finalists = new ArrayList<>();
+
+        Team semifinal1Winner = simulateSeries(
+                quarterFinalWinners.get(0),
+                quarterFinalWinners.get(1),
+                startDate
+        );
+
+        Team semifinal2Winner = simulateSeries(
+                quarterFinalWinners.get(2),
+                quarterFinalWinners.get(3),
+                startDate
+        );
+
+        finalists.add(semifinal1Winner);
+        finalists.add(semifinal2Winner);
+
+        return finalists;
+    }
+
+    public Team simulateFinal(
+            List<Team> finalists,
+            LocalDate finalDate
+    ) {
+        if (finalists.size() != 2) {
+            throw new IllegalArgumentException(
+                    "Two finalists are required."
+            );
+        }
+
+        Team teamA = finalists.get(0);
+        Team teamB = finalists.get(1);
+
+        FinalMatch finalMatch = new FinalMatch(
+                finalDate,
+                teamA,
+                teamB,
+                chooseEligibleReferee(teamA, teamB)
+        );
+
+        matches.add(finalMatch);
+
+        matchSimulator.simulate(finalMatch);
+
+        return determineFinalWinner(finalMatch);
+    }
+
+    private Team determineFinalWinner(
+            FinalMatch finalMatch
+    ) {
+        int homeGoals = finalMatch.getHomeGoals();
+        int awayGoals = finalMatch.getAwayGoals();
+
+        if (homeGoals > awayGoals) {
+            return finalMatch.getHomeTeam();
+        }
+
+        if (awayGoals > homeGoals) {
+            return finalMatch.getAwayTeam();
+        }
+
+        // Si empatan, definición por penales
+        return determinePenaltyShootoutWinner(finalMatch);
+    }
+
     public static void main(String[] args) throws IOException {
         ChampionshipRepository repository = new ChampionshipRepository();
         Championship championship = null;
@@ -486,6 +882,41 @@ public class Championship implements Serializable {
         System.out.println();
         System.out.println(
                 "Estado actual de la fase de grupos guardado."
+        );
+
+        List<Team> quarterWinners =
+                championship.simulateQuarterFinals(
+                        LocalDate.of(2026, 10, 1)
+                );
+
+        System.out.println("=== GANADORES DE CUARTOS ===");
+        for (Team team : quarterWinners) {
+            System.out.println(team.getName());
+        }
+
+        List<Team> finalists =
+                championship.simulateSemiFinals(
+                        quarterWinners,
+                        LocalDate.of(2026, 10, 15)
+                );
+
+        System.out.println("=== FINALISTAS ===");
+        for (Team team : finalists) {
+            System.out.println(team.getName());
+        }
+
+        Team champion =
+                championship.simulateFinal(
+                        finalists,
+                        LocalDate.of(2026, 10, 30)
+                );
+
+        System.out.println("=== CAMPEÓN ===");
+        System.out.println(champion.getName());
+
+        System.out.println(
+                "Cantidad total de partidos: "
+                        + championship.getMatches().size()
         );
 
         repository.save(championship);

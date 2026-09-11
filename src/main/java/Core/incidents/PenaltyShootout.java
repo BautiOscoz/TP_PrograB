@@ -1,12 +1,31 @@
 package Core.incidents;
 
+import Core.domain.Player;
+
 import java.io.Serial;
 import java.io.Serializable;
 
 public class PenaltyShootout extends Incident implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
-    public PenaltyShootout (int minuto){
-        super (minuto);
+    private Player player;
+    private boolean scored;
+
+    public PenaltyShootout(
+            int minute,
+            Player player,
+            boolean scored
+    ) {
+        super(minute);
+        this.player = player;
+        this.scored = scored;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public boolean isScored() {
+        return scored;
     }
 }
