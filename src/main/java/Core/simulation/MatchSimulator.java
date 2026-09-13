@@ -20,10 +20,25 @@ public class MatchSimulator {
         this.random = random;
     }
 
+
+    private FormationType chooseRandomFormation(Team team){
+        List<FormationType> validFormation= Arrays.stream(FormationType.values())
+                .filter(formation-> Lineup.canUseFormation(team,formation)).toList();
+
+        if(validFormation.isEmpty())
+            throw new IllegalStateException(team.getName()+"Doesnt have enougth player for any formation");
+
+        int randomPosition= random.nextInt(validFormation.size());
+        return validFormation.get(randomPosition);
+
+    }
+
     public void simulate(Match match) {
+
         if (match.isPlayed()) throw new IllegalStateException("The match has already been played.");
-        FormationType homeTactics = chooseRandomValidFormation(match.getHomeTeam());
-        FormationType awayTactics = chooseRandomValidFormation(match.getAwayTeam());
+
+        FormationType homeTactics = chooseRandomFormation(match.getHomeTeam());
+        FormationType awayTactics = chooseRandomFormation(match.getAwayTeam());
 
         Lineup homeLineup = new Lineup(match.getHomeTeam(), homeTactics);
         Lineup awayLineup = new Lineup(match.getAwayTeam(), awayTactics);
@@ -48,20 +63,6 @@ public class MatchSimulator {
         addSubstitutions(match, match.getAwayTeam(), awayLineup);
 
         match.setPlayed(true);
-    }
-
-    private FormationType chooseRandomValidFormation(Team team) {
-        List<FormationType> validFormations = Arrays.stream(FormationType.values())
-                .filter(formation -> Lineup.canUseFormation(team, formation))
-                .toList();
-
-        if (validFormations.isEmpty()) {
-            throw new IllegalStateException(
-                    team.getName() + " does not have enough available players for any formation."
-            );
-        }
-
-        return validFormations.get(random.nextInt(validFormations.size()));
     }
 
     private int sampleGoals(double rawExpectedGoals) {

@@ -2,6 +2,7 @@ package Core.domain;
 
 public class TeamStanding {
     private final Team team;
+
     private int points;
     private int played;
     private int won;
@@ -16,6 +17,7 @@ public class TeamStanding {
 
     public void registerMatch(int scoredGoals, int concededGoals) {
         played++;
+
         goalsFor += scoredGoals;
         goalsAgainst += concededGoals;
 
@@ -30,13 +32,39 @@ public class TeamStanding {
         }
     }
 
-    public Team getTeam() { return team; }
-    public int getPoints() { return points; }
-    public int getPlayed() { return played; }
-    public int getWon() { return won; }
-    public int getDrawn() { return drawn; }
-    public int getLost() { return lost; }
-    public int getGoalsFor() { return goalsFor; }
-    public int getGoalsAgainst() { return goalsAgainst; }
-    public int getGoalDifference() { return goalsFor - goalsAgainst; }
+    public int getGoalDifference() {
+        return goalsFor - goalsAgainst;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public int getPoints() {
+        return points;
+    }
+
+    public int getPlayed() {
+        return played;
+    }
+
+    public int getWon() {
+        return won;
+    }
+
+    public int getDrawn() {
+        return drawn;
+    }
+
+    public int getLost() {
+        return lost;
+    }
+
+    public int getGoalsFor() {
+        return goalsFor;
+    }
+
+    public int getGoalsAgainst() {
+        return goalsAgainst;
+    }
 }

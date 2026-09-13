@@ -1,0 +1,33 @@
+.custom-button {
+    -fx-font-size: 15px;
+    -fx-pref-width: 270px;            /* Ancho controlado y cómodo */
+    -fx-pref-height: 48px;             /* Altura proporcionada */
+
+    -fx-background-color: #0d1b2a;
+    -fx-border-color: #d4af37;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 0.6em;
+    -fx-background-radius: 0.6em;
+    -fx-cursor: hand;
+
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.7), 10, 0, 0, 4);
+}
+
+.button-label {
+    -fx-text-fill: #fef08a;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1px;
+}
+
+.gradient-layer {
+    -fx-background-color: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+    -fx-background-radius: 0.6em;
+    -fx-max-width: infinity;
+    -fx-max-height: infinity;
+}
+
+.transition-circle {
+    -fx-fill: linear-gradient(to right, #f59e0b, #fbbf24);
+    -fx-scale-x: 0;
+    -fx-scale-y: 0;
+}
