@@ -22,7 +22,32 @@ public class Goal extends Incident implements Serializable {
     }
 
     public Player getScorer() { return scorer; }
-    public Player getGoalkeeper() { return goalkeeper; }
     public boolean isPenalty() { return isPenalty; }
     public boolean isOwnGoal() { return isOwnGoal; }
+
+    @Override
+    public String getDescription() {
+        String type = isOwnGoal ? "OWN GOAL" : isPenalty ? "PENALTY GOAL" : "GOAL";
+        return type + " - " + scorer.getName() + " " + scorer.getLastName();
+    }
+
+    @Override
+    public Player getScoringPlayer() {
+        return isOwnGoal ? null : scorer;
+    }
+
+    @Override
+    public Player getGoalkeeper() {
+        return goalkeeper;
+    }
+
+    @Override
+    public boolean isMatchGoal() {
+        return true;
+    }
+
+    @Override
+    public boolean isPenaltyGoal() {
+        return isPenalty;
+    }
 }

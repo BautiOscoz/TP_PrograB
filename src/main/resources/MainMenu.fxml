@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane fx:id="rootPane" prefHeight="500.0" prefWidth="750.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.MainMenuController">
+    <children>
+        <ImageView fx:id="backgroundImage" fitHeight="-Infinity" fitWidth="-Infinity" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <image>
+                <Image url="@BackroundImage.jpg" />
+            </image>
+        </ImageView>
+        <VBox alignment="CENTER" layoutY="59.0" prefHeight="441.0" prefWidth="750.0" spacing="14.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="59.0">
+            <children>
+                <Button onAction="#handleNewTournament" prefWidth="270.0" styleClass="custom-button" text="New Tournament" />
+                <Button onAction="#handleLoadTournament" prefWidth="270.0" styleClass="custom-button" text="Load Tournament" />
+                <Button onAction="#handleStats" prefWidth="270.0" styleClass="custom-button" text="Stats" />
+                <Button onAction="#handleExit" prefWidth="270.0" styleClass="custom-button" text="Exit" />
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

@@ -1,5 +1,5 @@
 package Utils;
 
 public class Paths {
-    public static final String GESTIONAR_INITIAL_MENU_VIEW = "/view.fxml";
+    public static final String GESTIONAR_INITIAL_MENU_VIEW = "/MainMenu.fxml";
 }

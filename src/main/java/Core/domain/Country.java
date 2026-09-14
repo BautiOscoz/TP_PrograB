@@ -28,7 +28,8 @@ public class Country implements Serializable {
     @Override
     public boolean equals(Object object) {
         if (this == object) return true;
-        if (!(object instanceof Country country)) return false;
+        if (object == null || getClass() != object.getClass()) return false;
+        Country country = (Country) object;
         return name.equalsIgnoreCase(country.name);
     }
 

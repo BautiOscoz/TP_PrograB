@@ -74,4 +74,10 @@ public abstract class Match implements Serializable {
 
     public boolean isPlayed() { return played; }
     public void setPlayed(boolean played) { this.played = played; }
+
+    public boolean isGroupStage() { return false; }
+    public int getMatchday() { return 0; }
+    public void setMatchday(int matchday) {
+        throw new UnsupportedOperationException("This match does not belong to the group stage.");
+    }
 }

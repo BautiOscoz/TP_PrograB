@@ -19,4 +19,11 @@ public class Substitution extends Incident implements Serializable {
 
     public Player getPlayerIn() { return playerIn; }
     public Player getPlayerOut() { return playerOut; }
+
+    @Override
+    public String getDescription() {
+        return "SUBSTITUTION - IN: " + playerIn.getName() + " " + playerIn.getLastName()
+                + ", OUT: " + playerOut.getName() + " " + playerOut.getLastName();
+    }
+
 }

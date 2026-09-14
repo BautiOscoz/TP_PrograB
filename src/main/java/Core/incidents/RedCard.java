@@ -16,4 +16,24 @@ public class RedCard extends Incident implements Serializable {
     }
 
     public Player getPenalizedPlayer() { return penalizedPlayer; }
+
+    @Override
+    public String getDescription() {
+        return "RED CARD - " + penalizedPlayer.getName() + " " + penalizedPlayer.getLastName();
+    }
+
+    @Override
+    public Player getAffectedPlayer() {
+        return penalizedPlayer;
+    }
+
+    @Override
+    public int getFairPlayPoints() {
+        return 3;
+    }
+
+    @Override
+    public boolean isRedCard() {
+        return true;
+    }
 }
