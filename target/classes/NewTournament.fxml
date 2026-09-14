@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane fx:id="rootPane" prefHeight="500.0" prefWidth="750.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.NewTournamentController">
+    <children>
+        <ImageView fitHeight="-Infinity" fitWidth="-Infinity" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="-7.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <image>
+                <Image url="@BackroundImage.jpg" />
+            </image>
+        </ImageView>
+        <VBox alignment="CENTER" layoutY="185.0" prefHeight="319.0" prefWidth="750.0" spacing="16.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="185.0">
+            <children>
+                <VBox maxWidth="380.0" prefHeight="244.0" prefWidth="266.0" spacing="9.0" styleClass="form-card">
+                    <children>
+                        <Label styleClass="form-label" text="Tournament Name" />
+                        <TextField fx:id="tournamentNameField" promptText="Enter tournament name" styleClass="custom-textfield" />
+                        <Label styleClass="form-label" text="Number of Teams" />
+                        <Label styleClass="fixed-value-label" text="16 Teams" />
+                        <Label styleClass="form-label" text="Tournament Format" />
+                        <Label styleClass="fixed-value-label" text="Group Stage + Knockout" />
+                    </children>
+                </VBox>
+                <VBox spacing="9.0">
+                    <children>
+                        <Button onAction="#handleCreateTournament" prefWidth="220.0" styleClass="custom-button" text="Create Tournament" />
+                        <Button onAction="#handleBack" prefWidth="220.0" styleClass="secondary-button" text="Back" />
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

@@ -15,9 +15,16 @@ public class GroupMatch extends Match implements Serializable {
         this.matchday=matchday;
     }
 
+    @Override
+    public boolean isGroupStage() {
+        return true;
+    }
+
+    @Override
     public int getMatchday() {
         return matchday;
     }
+    @Override
     public void setMatchday(int matchday) {
         if (matchday < 1 || matchday > 3) {
             throw new IllegalArgumentException(

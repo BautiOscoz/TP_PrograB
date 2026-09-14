@@ -9,10 +9,13 @@ import javafx.stage.Stage;
 public class View extends Application {
     @Override
     public void start(Stage stage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/view.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/MainMenu.fxml"));
         Parent root = loader.load();
         Scene scene = new Scene(root);
-        stage.setTitle("Gestión de Torneo");
+        stage.setTitle("International Clubs Cup");
+        stage.setMinWidth(1080);
+        stage.setMinHeight(680);
+        stage.setResizable(false);
         stage.setScene(scene);
         stage.show();
     }

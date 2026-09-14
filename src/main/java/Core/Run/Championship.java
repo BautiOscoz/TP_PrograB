@@ -137,10 +137,9 @@ public class Championship implements Serializable {
 
     public int getCurrentMatchday() {
         return matches.stream()
-                .filter(GroupMatch.class::isInstance)
-                .map(GroupMatch.class::cast)
+                .filter(Match::isGroupStage)
                 .filter(match -> !match.isPlayed())
-                .mapToInt(GroupMatch::getMatchday)
+                .mapToInt(Match::getMatchday)
                 .min()
                 .orElse(0);
     }
@@ -173,8 +172,7 @@ public class Championship implements Serializable {
             return;
         }
         matches.stream()
-                .filter(GroupMatch.class::isInstance)
-                .map(GroupMatch.class::cast)
+                .filter(Match::isGroupStage)
                 .filter(match ->
                         match.getMatchday() == matchday
                 )
@@ -189,8 +187,7 @@ public class Championship implements Serializable {
         Map<Team,TeamStanding> standings= new LinkedHashMap<>();
         zone.getTeams().forEach(team->standings.put(team,new TeamStanding(team)));
         matches.stream()
-                .filter(GroupMatch.class::isInstance)
-                .map(GroupMatch.class::cast)
+                .filter(Match::isGroupStage)
                 .filter(Match::isPlayed)
                 .filter(match ->
                         standings.containsKey(match.getHomeTeam())
@@ -280,6 +277,10 @@ public class Championship implements Serializable {
 
     public List<TournamentZone> getTournamentZones() { return Collections.unmodifiableList(tournamentZones); }
     public List<Match> getMatches() { return Collections.unmodifiableList(matches); }
+
+    public List<Match> getPlayedMatches() {
+        return matches.stream().filter(Match::isPlayed).toList();
+    }
     public List<Team> getTeams() { return Collections.unmodifiableList(teams); }
     public List<Referee> getReferees() { return Collections.unmodifiableList(referees); }
     public List<Country> getCountries() { return Collections.unmodifiableList(countries); }
@@ -296,8 +297,7 @@ public class Championship implements Serializable {
 
     private void restoreMissingMatchdays() {
         matches.stream()
-                .filter(GroupMatch.class::isInstance)
-                .map(GroupMatch.class::cast)
+                .filter(Match::isGroupStage)
                 .filter(match ->
                         match.getMatchday() == 0
                 )
@@ -308,7 +308,7 @@ public class Championship implements Serializable {
                 );
     }
 
-    private int findMatchday(GroupMatch match) {
+    private int findMatchday(Match match) {
         TournamentZone zone =
                 tournamentZones.stream()
                         .filter(candidate ->
@@ -555,6 +555,7 @@ public class Championship implements Serializable {
         }
 
         // 3. Penales
+        secondLeg.setSettledByPenalties(true);
         return determinePenaltyShootoutWinner(secondLeg);
     }
 
@@ -785,6 +786,7 @@ public class Championship implements Serializable {
         }
 
         // Si empatan, definición por penales
+        finalMatch.setSettledByPenalties(true);
         return determinePenaltyShootoutWinner(finalMatch);
     }
 
