@@ -17,6 +17,8 @@ import java.util.function.Consumer;
 import Core.console.MatchConsoleReporter;
 import Core.console.StandingsConsoleReporter;
 
+import Core.enums.TournamentStage;
+
 import java.io.Serial;
 public class Championship implements Serializable {
     @Serial
@@ -30,7 +32,10 @@ public class Championship implements Serializable {
     private final List<Stadium> stadiums;
     private transient Random random;
     private transient MatchSimulator matchSimulator;
-
+    private TournamentStage stage;
+    private List<Team> quarterFinalWinners;
+    private List<Team> finalists;
+    private Team champion;
     public Championship(String jsonPath) throws IOException {
         this(jsonPath, new Random());
     }
@@ -52,6 +57,9 @@ public class Championship implements Serializable {
         this.matchSimulator = new MatchSimulator(random);
         this.tournamentZones = drawBalancedZones();
         this.matches = generateGroupMatches(LocalDate.now());
+        this.stage = TournamentStage.GROUP_STAGE;
+        this.quarterFinalWinners = new ArrayList<>();
+        this.finalists = new ArrayList<>();
     }
 
     private List<TournamentZone> drawBalancedZones() {
@@ -181,6 +189,9 @@ public class Championship implements Serializable {
                     matchSimulator.simulate(match);
                     afterEachMatch.accept(match);
                 });
+        if (!hasPendingGroupMatchdays()) {
+            stage = TournamentStage.QUARTER_FINALS;
+        }
     }
 
     public List<TeamStanding> getStandings(TournamentZone zone){
@@ -292,7 +303,31 @@ public class Championship implements Serializable {
         this.random = new Random();
         this.matchSimulator = new MatchSimulator(this.random);
         restoreMissingMatchdays();
+        TournamentStage observedStage = inferStageFromPlayedMatches();
+        if (stage == null || observedStage.ordinal() > stage.ordinal()) {
+            stage = observedStage;
+        }
+        if (quarterFinalWinners == null) {
+            quarterFinalWinners = new ArrayList<>();
+        }
+        if (finalists == null) {
+            finalists = new ArrayList<>();
+        }
         return this;
+    }
+    private TournamentStage inferStageFromPlayedMatches() {
+        if (hasPendingGroupMatchdays()) {
+            return TournamentStage.GROUP_STAGE;
+        }
+
+        long knockoutPlayed = matches.stream()
+                .filter(match -> !match.isGroupStage() && match.isPlayed())
+                .count();
+
+        if (knockoutPlayed >= 13) return TournamentStage.FINISHED;
+        if (knockoutPlayed >= 12) return TournamentStage.FINAL;
+        if (knockoutPlayed >= 8) return TournamentStage.SEMI_FINALS;
+        return TournamentStage.QUARTER_FINALS;
     }
 
     private void restoreMissingMatchdays() {
@@ -470,6 +505,14 @@ public class Championship implements Serializable {
         );
     }
 
+    public TournamentStage getStage() {
+        return stage;
+    }
+
+    public Team getChampion() {
+        return champion;
+    }
+
     private int getWeightedGoalDifference(
             FirstLegMatch firstLeg,
             SecondLegMatch secondLeg,
@@ -556,7 +599,53 @@ public class Championship implements Serializable {
 
         // 3. Penales
         secondLeg.setSettledByPenalties(true);
+        if (hasRecordedShootout(secondLeg)) {
+            return recordedPenaltyWinner(secondLeg);
+        }
         return determinePenaltyShootoutWinner(secondLeg);
+    }
+
+    /** Resolves an already-played series without drawing new penalties. */
+    public Team getRecordedSeriesWinner(FirstLegMatch firstLeg, SecondLegMatch secondLeg) {
+        if (!firstLeg.isPlayed() || !secondLeg.isPlayed()) {
+            throw new IllegalStateException("Both legs must be played.");
+        }
+        Team teamA = firstLeg.getHomeTeam();
+        Team teamB = firstLeg.getAwayTeam();
+        int pointsA = getSeriesPoints(firstLeg, secondLeg, teamA);
+        int pointsB = getSeriesPoints(firstLeg, secondLeg, teamB);
+        if (pointsA != pointsB) {
+            return pointsA > pointsB ? teamA : teamB;
+        }
+        int differenceA = getWeightedGoalDifference(firstLeg, secondLeg, teamA);
+        int differenceB = getWeightedGoalDifference(firstLeg, secondLeg, teamB);
+        if (differenceA != differenceB) {
+            return differenceA > differenceB ? teamA : teamB;
+        }
+        return recordedPenaltyWinner(secondLeg);
+    }
+
+    private boolean hasRecordedShootout(Match match) {
+        return match.getIncidents().stream().anyMatch(PenaltyShootout.class::isInstance);
+    }
+
+    private Team recordedPenaltyWinner(Match match) {
+        int home = 0;
+        int away = 0;
+        for (var incident : match.getIncidents()) {
+            if (!(incident instanceof PenaltyShootout penalty) || !penalty.isScored()) {
+                continue;
+            }
+            if (match.getHomeTeam().getPlayers().contains(penalty.getPlayer())) {
+                home++;
+            } else if (match.getAwayTeam().getPlayers().contains(penalty.getPlayer())) {
+                away++;
+            }
+        }
+        if (!hasRecordedShootout(match) || home == away) {
+            throw new IllegalStateException("No decided shootout was recorded.");
+        }
+        return home > away ? match.getHomeTeam() : match.getAwayTeam();
     }
 
     private Team determinePenaltyShootoutWinner(
@@ -669,10 +758,29 @@ public class Championship implements Serializable {
     public List<Team> simulateQuarterFinals(
             LocalDate startDate
     ) {
-        if (hasPendingGroupMatchdays()) {
+        if (stage != TournamentStage.QUARTER_FINALS) {
+            throw new IllegalStateException("Quarter-finals are not the current stage.");
+        }
+        scheduleQuarterFinals(startDate);
+        while (stage == TournamentStage.QUARTER_FINALS) {
+            simulateNextKnockoutMatch();
+        }
+        return List.copyOf(quarterFinalWinners);
+    }
+
+    public void scheduleQuarterFinals(LocalDate startDate) {
+        if (stage != TournamentStage.QUARTER_FINALS
+                || hasPendingGroupMatchdays()) {
             throw new IllegalStateException(
                     "Group stage must be completed first."
             );
+        }
+
+        // Evita volver a crear los cruces al cargar el torneo.
+        boolean alreadyScheduled = matches.stream()
+                .anyMatch(match -> match instanceof FirstLegMatch);
+        if (alreadyScheduled) {
+            return;
         }
 
         TournamentZone zoneA = tournamentZones.get(0);
@@ -680,95 +788,180 @@ public class Championship implements Serializable {
         TournamentZone zoneC = tournamentZones.get(2);
         TournamentZone zoneD = tournamentZones.get(3);
 
-        List<Team> winners = new ArrayList<>();
+        Team[][] pairings = {
+                {getFirst(zoneA), getSecond(zoneD)},
+                {getFirst(zoneB), getSecond(zoneC)},
+                {getFirst(zoneC), getSecond(zoneA)},
+                {getFirst(zoneD), getSecond(zoneB)}
+        };
 
-        Team winner1 = simulateSeries(
-                getFirst(zoneA),
-                getSecond(zoneD),
-                startDate
-        );
+        List<FirstLegMatch> fixtures = new ArrayList<>();
+        for (Team[] pairing : pairings) {
+            fixtures.add(new FirstLegMatch(
+                    startDate,
+                    pairing[0],
+                    pairing[1],
+                    chooseEligibleReferee(pairing[0], pairing[1])
+            ));
+        }
 
-        Team winner2 = simulateSeries(
-                getFirst(zoneB),
-                getSecond(zoneC),
-                startDate
-        );
+        matches.addAll(fixtures);
+    }
 
-        Team winner3 = simulateSeries(
-                getFirst(zoneC),
-                getSecond(zoneA),
-                startDate
-        );
+    /** Plays exactly one pending knockout match and prepares the next round when needed. */
+    public Match simulateNextKnockoutMatch() {
+        if (stage == TournamentStage.GROUP_STAGE || hasPendingGroupMatchdays()) {
+            throw new IllegalStateException("Finish the group stage first.");
+        }
+        if (stage == TournamentStage.FINISHED) {
+            throw new IllegalStateException("The tournament is already finished.");
+        }
 
-        Team winner4 = simulateSeries(
-                getFirst(zoneD),
-                getSecond(zoneB),
-                startDate
-        );
+        if (stage == TournamentStage.QUARTER_FINALS && firstLegs().isEmpty()) {
+            scheduleQuarterFinals(lastGroupDate().plusDays(7));
+        }
 
-        winners.add(winner1);
-        winners.add(winner2);
-        winners.add(winner3);
-        winners.add(winner4);
+        Match next = matches.stream()
+                .filter(match -> !match.isGroupStage() && !match.isPlayed())
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No pending knockout match for " + stage));
 
-        return winners;
+        matchSimulator.simulate(next);
+        advanceKnockoutStageIfNeeded();
+        return next;
+    }
+
+    private LocalDate lastGroupDate() {
+        return matches.stream()
+                .filter(Match::isGroupStage)
+                .map(Match::getMatchDate)
+                .max(LocalDate::compareTo)
+                .orElseThrow();
+    }
+
+    private List<FirstLegMatch> firstLegs() {
+        return matches.stream()
+                .filter(FirstLegMatch.class::isInstance)
+                .map(FirstLegMatch.class::cast)
+                .toList();
+    }
+
+    private List<SecondLegMatch> secondLegs() {
+        return matches.stream()
+                .filter(SecondLegMatch.class::isInstance)
+                .map(SecondLegMatch.class::cast)
+                .toList();
+    }
+
+    private void advanceKnockoutStageIfNeeded() {
+        if (stage == TournamentStage.QUARTER_FINALS) {
+            List<FirstLegMatch> first = firstLegs();
+            List<SecondLegMatch> second = secondLegs();
+            if (first.size() == 4 && first.stream().allMatch(Match::isPlayed)
+                    && second.isEmpty()) {
+                scheduleSecondLegs(first, first.get(0).getMatchDate().plusDays(7));
+            }
+            if (second.size() == 4 && second.stream().allMatch(Match::isPlayed)) {
+                quarterFinalWinners.clear();
+                for (int i = 0; i < 4; i++) {
+                    quarterFinalWinners.add(determineSeriesWinner(first.get(i), second.get(i)));
+                }
+                stage = TournamentStage.SEMI_FINALS;
+                scheduleSemiFinals(second.get(0).getMatchDate().plusDays(7));
+            }
+            return;
+        }
+
+        if (stage == TournamentStage.SEMI_FINALS) {
+            List<FirstLegMatch> first = firstLegs();
+            List<SecondLegMatch> second = secondLegs();
+            if (first.size() == 6 && first.subList(4, 6).stream().allMatch(Match::isPlayed)
+                    && second.size() == 4) {
+                scheduleSecondLegs(first.subList(4, 6), first.get(4).getMatchDate().plusDays(7));
+            }
+            if (second.size() == 6 && second.subList(4, 6).stream().allMatch(Match::isPlayed)) {
+                finalists.clear();
+                for (int i = 0; i < 2; i++) {
+                    finalists.add(determineSeriesWinner(first.get(i + 4), second.get(i + 4)));
+                }
+                stage = TournamentStage.FINAL;
+                scheduleFinal(second.get(4).getMatchDate().plusDays(7));
+            }
+            return;
+        }
+
+        FinalMatch finalMatch = matches.stream()
+                .filter(FinalMatch.class::isInstance)
+                .map(FinalMatch.class::cast)
+                .findFirst()
+                .orElseThrow();
+        if (finalMatch.isPlayed()) {
+            champion = determineFinalWinner(finalMatch);
+            stage = TournamentStage.FINISHED;
+        }
+    }
+
+    private void scheduleSecondLegs(List<FirstLegMatch> firstLegs, LocalDate date) {
+        List<SecondLegMatch> fixtures = new ArrayList<>();
+        for (FirstLegMatch first : firstLegs) {
+            Team home = first.getAwayTeam();
+            Team away = first.getHomeTeam();
+            fixtures.add(new SecondLegMatch(date, home, away,
+                    chooseEligibleReferee(home, away),
+                    first.getHomeGoals(), first.getAwayGoals()));
+        }
+        matches.addAll(fixtures);
+    }
+
+    private void scheduleSemiFinals(LocalDate date) {
+        if (quarterFinalWinners.size() != 4 || firstLegs().size() != 4) {
+            throw new IllegalStateException("Four decided quarter-finals are required.");
+        }
+        Team[][] pairings = {
+                {quarterFinalWinners.get(0), quarterFinalWinners.get(1)},
+                {quarterFinalWinners.get(2), quarterFinalWinners.get(3)}
+        };
+        List<FirstLegMatch> fixtures = new ArrayList<>();
+        for (Team[] pairing : pairings) {
+            fixtures.add(new FirstLegMatch(date, pairing[0], pairing[1],
+                    chooseEligibleReferee(pairing[0], pairing[1])));
+        }
+        matches.addAll(fixtures);
+    }
+
+    private void scheduleFinal(LocalDate date) {
+        if (finalists.size() != 2 || matches.stream().anyMatch(FinalMatch.class::isInstance)) {
+            throw new IllegalStateException("Two finalists and one unscheduled final are required.");
+        }
+        Team home = finalists.get(0);
+        Team away = finalists.get(1);
+        matches.add(new FinalMatch(date, home, away, chooseEligibleReferee(home, away)));
     }
 
     public List<Team> simulateSemiFinals(
             List<Team> quarterFinalWinners,
             LocalDate startDate
     ) {
-        if (quarterFinalWinners.size() != 4) {
-            throw new IllegalArgumentException(
-                    "Four quarter-final winners are required."
-            );
+        if (stage != TournamentStage.SEMI_FINALS
+                || !this.quarterFinalWinners.equals(quarterFinalWinners)) {
+            throw new IllegalStateException("Decided quarter-finals are required first.");
         }
-
-        List<Team> finalists = new ArrayList<>();
-
-        Team semifinal1Winner = simulateSeries(
-                quarterFinalWinners.get(0),
-                quarterFinalWinners.get(1),
-                startDate
-        );
-
-        Team semifinal2Winner = simulateSeries(
-                quarterFinalWinners.get(2),
-                quarterFinalWinners.get(3),
-                startDate
-        );
-
-        finalists.add(semifinal1Winner);
-        finalists.add(semifinal2Winner);
-
-        return finalists;
+        while (stage == TournamentStage.SEMI_FINALS) {
+            simulateNextKnockoutMatch();
+        }
+        return List.copyOf(finalists);
     }
 
     public Team simulateFinal(
             List<Team> finalists,
             LocalDate finalDate
     ) {
-        if (finalists.size() != 2) {
-            throw new IllegalArgumentException(
-                    "Two finalists are required."
-            );
+        if (stage != TournamentStage.FINAL || !this.finalists.equals(finalists)) {
+            throw new IllegalStateException("Decided semi-finals are required first.");
         }
-
-        Team teamA = finalists.get(0);
-        Team teamB = finalists.get(1);
-
-        FinalMatch finalMatch = new FinalMatch(
-                finalDate,
-                teamA,
-                teamB,
-                chooseEligibleReferee(teamA, teamB)
-        );
-
-        matches.add(finalMatch);
-
-        matchSimulator.simulate(finalMatch);
-
-        return determineFinalWinner(finalMatch);
+        simulateNextKnockoutMatch();
+        return champion;
     }
 
     private Team determineFinalWinner(
@@ -787,7 +980,21 @@ public class Championship implements Serializable {
 
         // Si empatan, definición por penales
         finalMatch.setSettledByPenalties(true);
+        if (hasRecordedShootout(finalMatch)) {
+            return recordedPenaltyWinner(finalMatch);
+        }
         return determinePenaltyShootoutWinner(finalMatch);
+    }
+
+    public Team getRecordedFinalWinner(FinalMatch finalMatch) {
+        if (!finalMatch.isPlayed()) {
+            throw new IllegalStateException("The final has not been played.");
+        }
+        if (finalMatch.getHomeGoals() != finalMatch.getAwayGoals()) {
+            return finalMatch.getHomeGoals() > finalMatch.getAwayGoals()
+                    ? finalMatch.getHomeTeam() : finalMatch.getAwayTeam();
+        }
+        return recordedPenaltyWinner(finalMatch);
     }
 
     public static void main(String[] args) throws IOException {
@@ -867,7 +1074,7 @@ public class Championship implements Serializable {
                     "Resultados y posiciones guardadas:"
             );
 
-            championship.getMatches()
+            championship.getPlayedMatches()
                     .forEach(matchReporter::printMatch);
 
             for (
@@ -881,40 +1088,27 @@ public class Championship implements Serializable {
             }
         }
 
-        System.out.println();
-        System.out.println(
-                "Estado actual de la fase de grupos guardado."
-        );
-
-        List<Team> quarterWinners =
-                championship.simulateQuarterFinals(
-                        LocalDate.of(2026, 10, 1)
-                );
-
-        System.out.println("=== GANADORES DE CUARTOS ===");
-        for (Team team : quarterWinners) {
-            System.out.println(team.getName());
+        while (championship.getStage() != TournamentStage.FINISHED) {
+            System.out.print("\nPress Enter to simulate the next knockout match...");
+            scanner.nextLine();
+            Match played = championship.simulateNextKnockoutMatch();
+            matchReporter.printMatch(played);
+            repository.save(championship);
         }
-
-        List<Team> finalists =
-                championship.simulateSemiFinals(
-                        quarterWinners,
-                        LocalDate.of(2026, 10, 15)
-                );
-
-        System.out.println("=== FINALISTAS ===");
-        for (Team team : finalists) {
-            System.out.println(team.getName());
-        }
-
-        Team champion =
-                championship.simulateFinal(
-                        finalists,
-                        LocalDate.of(2026, 10, 30)
-                );
 
         System.out.println("=== CAMPEÓN ===");
-        System.out.println(champion.getName());
+        if (championship.getChampion() != null) {
+            System.out.println(championship.getChampion().getName());
+        } else {
+            FinalMatch savedFinal = championship.getMatches().stream()
+                    .filter(FinalMatch.class::isInstance)
+                    .map(FinalMatch.class::cast)
+                    .findFirst()
+                    .orElse(null);
+            if (savedFinal != null) {
+                System.out.println(championship.getRecordedFinalWinner(savedFinal).getName());
+            }
+        }
 
         System.out.println(
                 "Cantidad total de partidos: "

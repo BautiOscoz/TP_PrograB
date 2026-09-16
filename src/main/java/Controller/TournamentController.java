@@ -2,9 +2,11 @@ package Controller;
 
 import Core.Run.Championship;
 import Core.domain.FinalMatch;
+import Core.domain.FirstLegMatch;
 import Core.domain.Match;
 import Core.domain.SecondLegMatch;
 import Core.domain.Team;
+import Core.incidents.Incident;
 import Core.incidents.PenaltyShootout;
 import Core.domain.TeamStanding;
 import Core.domain.TournamentZone;
@@ -27,8 +29,11 @@ import javafx.scene.layout.VBox;
 import javafx.stage.WindowEvent;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.List;
+
+import Core.enums.TournamentStage;
+import java.time.LocalDate;
+import java.util.Comparator;
 
 public class TournamentController {
 
@@ -66,6 +71,9 @@ public class TournamentController {
     @FXML private Button refereesStBtn;
     @FXML private Button getIDBtn;
     @FXML private Button backBtn;
+    @FXML private Button simulateMatchdayBtn;
+    @FXML private Button simulateKnockoutBtn;
+    @FXML private TextArea matchdayResultsArea;
 
     private final TournamentReportService reportService = new TournamentReportService();
     private final ChampionshipRepository repository = new ChampionshipRepository();
@@ -83,10 +91,63 @@ public class TournamentController {
 
     public void setTournament(Championship championship, String tournamentName) {
         this.championship = championship;
+        scheduleQuarterFinalsIfNeeded();
         this.tournamentName = tournamentName;
         tournamentNameLabel.setText(tournamentName);
         configureCloseSave();
         showGroupStage();
+        updateSimulationButtons();
+    }
+
+    @FXML
+    private void handleSimulateMatchday() {
+        if (championship == null || !championship.hasPendingGroupMatchdays()) {
+            return;
+        }
+
+        int playedMatchday = championship.getCurrentMatchday();
+        championship.simulateNextMatchday();
+        scheduleQuarterFinalsIfNeeded();
+        repository.save(championship);
+
+        showGroupStage();
+        phaseLabel.setText("Group Stage - Matchday " + playedMatchday + " played");
+        updateSimulationButtons();
+    }
+
+    private void updateSimulationButtons() {
+        simulateMatchdayBtn.setDisable(!championship.hasPendingGroupMatchdays());
+        simulateKnockoutBtn.setDisable(
+                championship.getStage() == TournamentStage.GROUP_STAGE
+                        || championship.getStage() == TournamentStage.FINISHED);
+    }
+
+    private void showLatestMatchdayResults() {
+        int latestMatchday = championship.getPlayedMatches().stream()
+                .filter(Match::isGroupStage)
+                .mapToInt(Match::getMatchday)
+                .max()
+                .orElse(0);
+
+        if (latestMatchday == 0) {
+            matchdayResultsArea.setText("No matchdays have been played yet.");
+            return;
+        }
+
+        StringBuilder results = new StringBuilder();
+        results.append("MATCHDAY ").append(latestMatchday).append("\n\n");
+
+        championship.getPlayedMatches().stream()
+                .filter(Match::isGroupStage)
+                .filter(match -> match.getMatchday() == latestMatchday)
+                .forEach(match -> results
+                        .append(match.getHomeTeam().getName())
+                        .append(" ").append(match.getHomeGoals())
+                        .append(" - ").append(match.getAwayGoals())
+                        .append(" ").append(match.getAwayTeam().getName())
+                        .append("\n"));
+
+        matchdayResultsArea.setText(results.toString());
     }
 
     @FXML
@@ -120,30 +181,28 @@ public class TournamentController {
             return;
         }
 
+        phaseLabel.setText("Knockout Stage");
+        zoneTitleLabel.setVisible(false);
+        showKnockoutBracket(true);
+        buildKnockoutBracket();
+    }
+
+    @FXML
+    private void handleSimulateKnockoutMatch() {
+        if (championship == null) {
+            return;
+        }
         try {
-            if (!hasKnockoutMatches()) {
-                List<Core.domain.Team> quarterFinalWinners =
-                        championship.simulateQuarterFinals(LocalDate.now().plusDays(7));
-
-                List<Core.domain.Team> finalists =
-                        championship.simulateSemiFinals(
-                                quarterFinalWinners,
-                                LocalDate.now().plusDays(21)
-                        );
-
-                championship.simulateFinal(
-                        finalists,
-                        LocalDate.now().plusDays(35)
-                );
-
-                repository.save(championship);
-            }
-
-            phaseLabel.setText("Knockout Stage");
+            Match played = championship.simulateNextKnockoutMatch();
+            repository.save(championship);
+            phaseLabel.setText(played.getHomeTeam().getName() + " "
+                    + played.getHomeGoals() + " - " + played.getAwayGoals()
+                    + " " + played.getAwayTeam().getName());
             zoneTitleLabel.setVisible(false);
             showKnockoutBracket(true);
             buildKnockoutBracket();
-        } catch (IllegalArgumentException | IllegalStateException e) {
+            updateSimulationButtons();
+        } catch (IllegalStateException | IllegalArgumentException e) {
             showError(e.getMessage());
         }
     }
@@ -305,6 +364,7 @@ public class TournamentController {
         zoneTitleLabel.setVisible(true);
         showGroupTable();
         showZone(0);
+        showLatestMatchdayResults();
     }
 
     private void showGroupTable() {
@@ -314,6 +374,8 @@ public class TournamentController {
         reportArea.setManaged(false);
         knockoutBracket.setVisible(false);
         knockoutBracket.setManaged(false);
+        matchdayResultsArea.setVisible(true);
+        matchdayResultsArea.setManaged(true);
     }
 
     private void showReport() {
@@ -323,6 +385,8 @@ public class TournamentController {
         reportArea.setManaged(true);
         knockoutBracket.setVisible(false);
         knockoutBracket.setManaged(false);
+        matchdayResultsArea.setVisible(false);
+        matchdayResultsArea.setManaged(false);
     }
 
     private void showKnockoutBracket(boolean visible) {
@@ -332,6 +396,8 @@ public class TournamentController {
         reportArea.setManaged(false);
         knockoutBracket.setVisible(visible);
         knockoutBracket.setManaged(visible);
+        matchdayResultsArea.setVisible(false);
+        matchdayResultsArea.setManaged(false);
     }
 
     private void showZone(int zoneIndex) {
@@ -351,10 +417,7 @@ public class TournamentController {
         );
     }
 
-    private boolean hasKnockoutMatches() {
-        return championship.getMatches().stream()
-                .anyMatch(match -> !match.isGroupStage());
-    }
+
 
     private void configureColumns() {
         positionColumn.setCellValueFactory(cell ->
@@ -401,21 +464,33 @@ public class TournamentController {
         finalColumn.getChildren().clear();
         winnerBanner.setText("GANADOR: -");
 
-        List<Match> knockoutMatches = championship.getPlayedMatches().stream()
-                .filter(match -> !match.isGroupStage())
+        List<FirstLegMatch> firstLegs = championship.getMatches().stream()
+                .filter(FirstLegMatch.class::isInstance)
+                .map(FirstLegMatch.class::cast)
+                .toList();
+        List<SecondLegMatch> secondLegs = championship.getMatches().stream()
+                .filter(SecondLegMatch.class::isInstance)
+                .map(SecondLegMatch.class::cast)
                 .toList();
 
-        addSeriesCards(quarterColumn, knockoutMatches, 0, 4);
-        addSeriesCards(semiColumn, knockoutMatches, 8, 2);
+        addSeriesCards(quarterColumn, firstLegs, secondLegs, 0, 4);
+        addSeriesCards(semiColumn, firstLegs, secondLegs, 4, 2);
         addConnectors(quarterConnectorColumn, 4);
         addConnectors(semiConnectorColumn, 2);
 
-        if (knockoutMatches.size() >= 13) {
-            Match finalMatch = knockoutMatches.get(12);
-            Team winner = getMatchWinner(finalMatch);
-            finalColumn.getChildren().add(createMatchCard(List.of(finalMatch), winner));
-            winnerBanner.setText("GANADOR: " + winner.getName());
-        }
+        championship.getMatches().stream()
+                .filter(FinalMatch.class::isInstance)
+                .map(FinalMatch.class::cast)
+                .findFirst()
+                .ifPresent(finalMatch -> {
+                    if (finalMatch.isPlayed()) {
+                        Team winner = championship.getRecordedFinalWinner(finalMatch);
+                        finalColumn.getChildren().add(createMatchCard(List.of(finalMatch), winner));
+                        winnerBanner.setText("GANADOR: " + winner.getName());
+                    } else {
+                        finalColumn.getChildren().add(createPendingMatchCard(finalMatch));
+                    }
+                });
     }
 
     private void addConnectors(VBox column, int count) {
@@ -426,17 +501,48 @@ public class TournamentController {
         }
     }
 
-    private void addSeriesCards(VBox column, List<Match> knockoutMatches, int startIndex, int count) {
-        for (int i = 0; i < count; i++) {
-            int index = startIndex + (i * 2);
-            if (index + 1 >= knockoutMatches.size()) {
-                return;
+    private void addSeriesCards(VBox column, List<FirstLegMatch> firstLegs,
+                                List<SecondLegMatch> secondLegs, int startIndex, int count) {
+        for (int index = startIndex; index < startIndex + count && index < firstLegs.size(); index++) {
+            FirstLegMatch first = firstLegs.get(index);
+            SecondLegMatch second = index < secondLegs.size() ? secondLegs.get(index) : null;
+            if (second != null && first.isPlayed() && second.isPlayed()) {
+                Team winner = championship.getRecordedSeriesWinner(first, second);
+                column.getChildren().add(createMatchCard(List.of(first, second), winner));
+            } else {
+                column.getChildren().add(createPendingSeriesCard(first, second));
             }
-            Match firstLeg = knockoutMatches.get(index);
-            Match secondLeg = knockoutMatches.get(index + 1);
-            Team winner = getSeriesWinner(firstLeg, secondLeg);
-            column.getChildren().add(createMatchCard(List.of(firstLeg, secondLeg), winner));
         }
+    }
+
+    private VBox createPendingSeriesCard(FirstLegMatch first, SecondLegMatch second) {
+        VBox card = new VBox(3);
+        card.getStyleClass().add("match-card");
+        card.getChildren().add(new Label(first.getHomeTeam().getName()
+                + " vs " + first.getAwayTeam().getName()));
+        if (first.isPlayed()) {
+            card.getChildren().add(new Label("Ida: " + first.getHomeGoals()
+                    + " - " + first.getAwayGoals()));
+        } else {
+            card.getChildren().add(new Label("Ida pendiente"));
+        }
+        if (second == null || !second.isPlayed()) {
+            card.getChildren().add(new Label("Vuelta pendiente"));
+        }
+        if (first.isPlayed()) {
+            card.getChildren().add(new Label("Click para ver incidencias"));
+            card.setOnMouseClicked(event -> showMatchDetails(List.of(first)));
+        }
+        return card;
+    }
+
+    private VBox createPendingMatchCard(FinalMatch match) {
+        VBox card = new VBox(3);
+        card.getStyleClass().add("match-card");
+        card.getChildren().add(new Label(match.getHomeTeam().getName()
+                + " vs " + match.getAwayTeam().getName()));
+        card.getChildren().add(new Label("Final pendiente"));
+        return card;
     }
 
     private VBox createMatchCard(List<Match> matches, Team winner) {
@@ -472,7 +578,45 @@ public class TournamentController {
         winnerLabel.setMaxWidth(Double.MAX_VALUE);
         winnerLabel.setAlignment(javafx.geometry.Pos.CENTER);
         card.getChildren().add(winnerLabel);
+        card.getChildren().add(new Label("Click para ver incidencias"));
+        card.setOnMouseClicked(event -> showMatchDetails(matches));
         return card;
+    }
+
+    private void showMatchDetails(List<Match> matches) {
+        StringBuilder details = new StringBuilder();
+        for (Match match : matches) {
+            details.append(match.getHomeTeam().getName())
+                    .append(" ").append(match.getHomeGoals())
+                    .append(" - ").append(match.getAwayGoals())
+                    .append(" ").append(match.getAwayTeam().getName())
+                    .append("\nFecha: ").append(match.getMatchDate())
+                    .append("\nFormaciones: ")
+                    .append(match.getHomeLineup().getFormation())
+                    .append(" / ")
+                    .append(match.getAwayLineup().getFormation())
+                    .append("\nIncidencias:\n");
+            if (match.getIncidents().isEmpty()) {
+                details.append("Sin incidencias\n");
+            } else {
+                match.getIncidents().stream()
+                        .sorted(Comparator.comparingInt(Incident::getMinute))
+                        .forEach(incident -> details
+                                .append(incident.getMinute()).append("' ")
+                                .append(incident.getDescription()).append("\n"));
+            }
+            details.append("\n");
+        }
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Match incidents");
+        alert.setHeaderText("Played match details");
+        TextArea timeline = new TextArea(details.toString());
+        timeline.setEditable(false);
+        timeline.setWrapText(true);
+        timeline.setPrefSize(550, 340);
+        alert.getDialogPane().setContent(timeline);
+        alert.showAndWait();
     }
 
     private void addTeamScoreRow(VBox card, Team team, int goals, Team winner) {
@@ -525,39 +669,9 @@ public class TournamentController {
                 .anyMatch(incident -> incident instanceof PenaltyShootout);
     }
 
-    private Team getSeriesWinner(Match firstLeg, Match secondLeg) {
-        int[] aggregate = getAggregateScore(firstLeg, secondLeg);
-        if (aggregate[0] > aggregate[1]) {
-            return firstLeg.getHomeTeam();
-        }
-        if (aggregate[1] > aggregate[0]) {
-            return firstLeg.getAwayTeam();
-        }
-        return getPenaltyWinner(secondLeg);
-    }
-
-    private Team getMatchWinner(Match match) {
-        if (match.getHomeGoals() > match.getAwayGoals()) {
-            return match.getHomeTeam();
-        }
-        if (match.getAwayGoals() > match.getHomeGoals()) {
-            return match.getAwayTeam();
-        }
-        return getPenaltyWinner(match);
-    }
-
-    private Team getPenaltyWinner(Match match) {
-        int[] penalties = getPenaltyScore(match);
-        return penalties[0] > penalties[1] ? match.getHomeTeam() : match.getAwayTeam();
-    }
-
     private int[] getPenaltyScore(Match match) {
         int home = 0;
         int away = 0;
-
-        if (match.getHomeLineup() == null || match.getAwayLineup() == null) {
-            return new int[]{0, 0};
-        }
 
         for (var incident : match.getIncidents()) {
             if (!(incident instanceof PenaltyShootout penalty)) {
@@ -566,9 +680,9 @@ public class TournamentController {
             if (!penalty.isScored()) {
                 continue;
             }
-            if (match.getHomeLineup().getPlayers().contains(penalty.getPlayer())) {
+            if (match.getHomeTeam().getPlayers().contains(penalty.getPlayer())) {
                 home++;
-            } else if (match.getAwayLineup().getPlayers().contains(penalty.getPlayer())) {
+            } else if (match.getAwayTeam().getPlayers().contains(penalty.getPlayer())) {
                 away++;
             }
         }
@@ -627,5 +741,19 @@ public class TournamentController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void scheduleQuarterFinalsIfNeeded() {
+        if (championship.getStage() != TournamentStage.QUARTER_FINALS) {
+            return;
+        }
+
+        LocalDate lastGroupDate = championship.getMatches().stream()
+                .filter(Match::isGroupStage)
+                .map(Match::getMatchDate)
+                .max(LocalDate::compareTo)
+                .orElseThrow();
+
+        championship.scheduleQuarterFinals(lastGroupDate.plusDays(7));
     }
 }

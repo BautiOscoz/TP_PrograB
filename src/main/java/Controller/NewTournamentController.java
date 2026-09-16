@@ -11,7 +11,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.layout.AnchorPane;
 
 import java.io.IOException;
-import java.time.LocalDate;
+
 
 public class NewTournamentController {
 
@@ -31,22 +31,6 @@ public class NewTournamentController {
 
         try {
             Championship championship = new Championship(DATA_PATH);
-            championship.simulateGroupStage();
-
-            var quarterFinalWinners = championship.simulateQuarterFinals(
-                    LocalDate.now().plusDays(7)
-            );
-
-            var finalists = championship.simulateSemiFinals(
-                    quarterFinalWinners,
-                    LocalDate.now().plusDays(21)
-            );
-
-            championship.simulateFinal(
-                    finalists,
-                    LocalDate.now().plusDays(35)
-            );
-
             new ChampionshipRepository().save(championship);
             openTournament(championship, tournamentName);
         } catch (IOException | IllegalArgumentException | IllegalStateException e) {
