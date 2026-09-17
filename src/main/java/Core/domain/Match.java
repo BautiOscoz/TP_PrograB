@@ -1,12 +1,15 @@
 package Core.domain;
 
 import Core.incidents.Incident;
+import Core.incidents.RedCard;
+import Core.incidents.Substitution;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public abstract class Match implements Serializable {
@@ -36,6 +39,71 @@ public abstract class Match implements Serializable {
 
     public void addIncident(Incident incident) {
         this.incidents.add(incident);
+        this.incidents.sort(
+                Comparator.comparingInt(Incident::getMinute)
+        );
+    }
+
+    public List<Player> getPlayersOnField(Team team, int minute) {
+        if (minute < 0) {
+            throw new IllegalArgumentException(
+                    "The minute cannot be negative."
+            );
+        }
+
+        Lineup initialLineup;
+
+        if (team == homeTeam) {
+            initialLineup = homeLineup;
+        } else if (team == awayTeam) {
+            initialLineup = awayLineup;
+        } else {
+            throw new IllegalArgumentException(
+                    "The team does not belong to this match."
+            );
+        }
+
+        if (initialLineup == null) {
+            throw new IllegalStateException(
+                    "The initial lineups have not been assigned."
+            );
+        }
+
+        List<Player> playersOnField =
+                new ArrayList<>(initialLineup.getPlayers());
+
+        for (Incident incident : incidents) {
+            if (incident.getMinute() > minute) {
+                break;
+            }
+
+            if (incident instanceof Substitution substitution) {
+                if (team.getPlayers().contains(
+                        substitution.getPlayerIn()
+                )) {
+                    playersOnField.remove(
+                            substitution.getPlayerOut()
+                    );
+                    if (!playersOnField.contains(substitution.getPlayerIn())) {
+                        playersOnField.add(
+                                substitution.getPlayerIn()
+                        );
+                    }
+                }
+            }
+
+            if (incident instanceof RedCard redCard) {
+                if (team.getPlayers().contains(
+                        redCard.getPenalizedPlayer()
+                )) {
+                    playersOnField.remove(
+                            redCard.getPenalizedPlayer()
+                    );
+                }
+            }
+        }
+
+        return Collections.unmodifiableList(playersOnField);
     }
 
     // Getters and Setters

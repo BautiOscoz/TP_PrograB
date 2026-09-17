@@ -655,10 +655,10 @@ public class Championship implements Serializable {
         Team awayTeam = match.getAwayTeam();
 
         List<Player> homePlayers =
-                match.getHomeLineup().getPlayers();
+                match.getPlayersOnField(homeTeam, 90);
 
         List<Player> awayPlayers =
-                match.getAwayLineup().getPlayers();
+                match.getPlayersOnField(awayTeam, 90);
 
         int homeScore = 0;
         int awayScore = 0;
