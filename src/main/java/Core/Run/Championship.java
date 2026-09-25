@@ -1,5 +1,6 @@
 package Core.Run;
 
+import Core.classification.StandingsCalculator;
 import Core.console.MatchConsoleReporter;
 import Core.domain.*;
 import Core.incidents.PenaltyShootout;
@@ -194,67 +195,10 @@ public class Championship implements Serializable {
         }
     }
 
-    public List<TeamStanding> getStandings(TournamentZone zone){
-        Map<Team,TeamStanding> standings= new LinkedHashMap<>();
-        zone.getTeams().forEach(team->standings.put(team,new TeamStanding(team)));
-        matches.stream()
-                .filter(Match::isGroupStage)
-                .filter(Match::isPlayed)
-                .filter(match ->
-                        standings.containsKey(match.getHomeTeam())
-                                && standings.containsKey(
-                                match.getAwayTeam()
-                        )
-                )
-                .forEach(match -> {
-                    TeamStanding homeStanding =
-                            standings.get(match.getHomeTeam());
+    public List<TeamStanding> getStandings(TournamentZone zone) {
+        StandingsCalculator calculator = new StandingsCalculator();
 
-                    TeamStanding awayStanding =
-                            standings.get(match.getAwayTeam());
-
-                    homeStanding.registerMatch(
-                            match.getHomeGoals(),
-                            match.getAwayGoals()
-                    );
-
-                    awayStanding.registerMatch(
-                            match.getAwayGoals(),
-                            match.getHomeGoals()
-                    );
-                });
-
-        return standings.values().stream()
-                .sorted(
-                        Comparator
-                                .comparingInt(
-                                        TeamStanding::getPoints
-                                )
-                                .reversed()
-                                .thenComparing(
-                                        Comparator
-                                                .comparingInt(
-                                                        TeamStanding
-                                                                ::getGoalDifference
-                                                )
-                                                .reversed()
-                                )
-                                .thenComparing(
-                                        Comparator
-                                                .comparingInt(
-                                                        TeamStanding
-                                                                ::getGoalsFor
-                                                )
-                                                .reversed()
-                                )
-                                .thenComparingInt(
-                                        standing ->
-                                                standing
-                                                        .getTeam()
-                                                        .getRanking()
-                                )
-                )
-                .toList();
+        return calculator.calculate(zone, matches);
     }
 
     public void loadVenues(List<City> cities, List<Stadium> stadiums) {
