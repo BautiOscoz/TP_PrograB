@@ -814,9 +814,26 @@ public class Championship implements Serializable {
 
         matchSimulator.simulate(next);
 
-        pendingKnockoutMatch = next;
+// Si terminó una vuelta, resolvemos la serie antes de mostrarla.
+        if (next instanceof SecondLegMatch secondLeg) {
+            FirstLegMatch firstLeg = matches.stream()
+                    .filter(FirstLegMatch.class::isInstance)
+                    .map(FirstLegMatch.class::cast)
+                    .filter(first ->
+                            first.getHomeTeam() == secondLeg.getAwayTeam()
+                                    && first.getAwayTeam() == secondLeg.getHomeTeam()
+                    )
+                    .filter(Match::isPlayed)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException(
+                            "The first leg of this series was not found."
+                    ));
 
-        return completePendingKnockoutMatch();
+            determineSeriesWinner(firstLeg, secondLeg);
+        }
+
+        advanceKnockoutStageIfNeeded();
+        return next;
     }
 
     private LocalDate lastGroupDate() {
@@ -997,8 +1014,12 @@ public class Championship implements Serializable {
             loadVenues(loadedCities, loadedStadiums);
 
         } catch (SQLException e) {
+            e.printStackTrace();
+
             throw new IllegalStateException(
-                    "No se pudieron cargar los estadios desde PostgreSQL.",
+                    "No se pudieron cargar los estadios.\n"
+                            + "Detalle: " + e.getMessage()
+                            + "\nCódigo SQL: " + e.getSQLState(),
                     e
             );
         }
