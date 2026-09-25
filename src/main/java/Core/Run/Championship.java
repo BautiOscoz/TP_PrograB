@@ -19,7 +19,10 @@ import Core.console.MatchConsoleReporter;
 import Core.console.StandingsConsoleReporter;
 
 import Core.enums.TournamentStage;
+import Infrastructure.database.CityRepository;
+import Infrastructure.database.StadiumRepository;
 
+import java.sql.SQLException;
 import java.io.Serial;
 public class Championship implements Serializable {
     @Serial
@@ -37,6 +40,7 @@ public class Championship implements Serializable {
     private List<Team> quarterFinalWinners;
     private List<Team> finalists;
     private Team champion;
+    private Match pendingKnockoutMatch;
     public Championship(String jsonPath) throws IOException {
         this(jsonPath, new Random());
     }
@@ -248,7 +252,10 @@ public class Championship implements Serializable {
         this.matchSimulator = new MatchSimulator(this.random);
         restoreMissingMatchdays();
         TournamentStage observedStage = inferStageFromPlayedMatches();
-        if (stage == null || observedStage.ordinal() > stage.ordinal()) {
+        if (pendingKnockoutMatch == null
+                && (stage == null
+                || observedStage.ordinal() > stage.ordinal())) {
+
             stage = observedStage;
         }
         if (quarterFinalWinners == null) {
@@ -754,26 +761,62 @@ public class Championship implements Serializable {
 
     /** Plays exactly one pending knockout match and prepares the next round when needed. */
     public Match simulateNextKnockoutMatch() {
-        if (stage == TournamentStage.GROUP_STAGE || hasPendingGroupMatchdays()) {
-            throw new IllegalStateException("Finish the group stage first.");
-        }
-        if (stage == TournamentStage.FINISHED) {
-            throw new IllegalStateException("The tournament is already finished.");
+        // Primero termina una baja pendiente, sin repetir el partido.
+        if (pendingKnockoutMatch != null) {
+            return completePendingKnockoutMatch();
         }
 
-        if (stage == TournamentStage.QUARTER_FINALS && firstLegs().isEmpty()) {
-            scheduleQuarterFinals(lastGroupDate().plusDays(7));
+        if (stage == TournamentStage.GROUP_STAGE
+                || hasPendingGroupMatchdays()) {
+
+            throw new IllegalStateException(
+                    "Primero tenés que terminar la fase de grupos."
+            );
+        }
+
+        if (stage == TournamentStage.FINISHED) {
+            throw new IllegalStateException(
+                    "El torneo ya terminó."
+            );
+        }
+
+        if (stage == TournamentStage.QUARTER_FINALS
+                && firstLegs().isEmpty()) {
+
+            scheduleQuarterFinals(
+                    lastGroupDate().plusDays(7)
+            );
         }
 
         Match next = matches.stream()
-                .filter(match -> !match.isGroupStage() && !match.isPlayed())
+                .filter(match ->
+                        !match.isGroupStage() && !match.isPlayed()
+                )
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
-                        "No pending knockout match for " + stage));
+                        "No hay partidos pendientes para esta fase."
+                ));
+
+        // Consulta los disponibles en PostgreSQL antes de cada partido.
+        reloadVenuesFromDatabase();
+
+        if (stadiums.isEmpty()) {
+            throw new IllegalStateException(
+                    "No quedan estadios disponibles. "
+                            + "Agregá uno antes de continuar."
+            );
+        }
+
+        Stadium selectedStadium =
+                stadiums.get(random.nextInt(stadiums.size()));
+
+        next.setStadium(selectedStadium);
 
         matchSimulator.simulate(next);
-        advanceKnockoutStageIfNeeded();
-        return next;
+
+        pendingKnockoutMatch = next;
+
+        return completePendingKnockoutMatch();
     }
 
     private LocalDate lastGroupDate() {
@@ -939,6 +982,58 @@ public class Championship implements Serializable {
                     ? finalMatch.getHomeTeam() : finalMatch.getAwayTeam();
         }
         return recordedPenaltyWinner(finalMatch);
+    }
+    private void reloadVenuesFromDatabase() {
+        try {
+            CityRepository cityRepository = new CityRepository();
+            StadiumRepository stadiumRepository = new StadiumRepository();
+
+            List<City> loadedCities =
+                    cityRepository.findAll(countries);
+
+            List<Stadium> loadedStadiums =
+                    stadiumRepository.findAll(loadedCities);
+
+            loadVenues(loadedCities, loadedStadiums);
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "No se pudieron cargar los estadios desde PostgreSQL.",
+                    e
+            );
+        }
+    }
+
+    private Match completePendingKnockoutMatch() {
+        Match played = pendingKnockoutMatch;
+        Stadium stadium = played.getStadium();
+
+        try {
+            StadiumRepository repository = new StadiumRepository();
+
+            // Si ya no existe, la baja ya está cumplida.
+            repository.deleteById(stadium.getId());
+
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "El partido ya se jugó, pero no se pudo eliminar "
+                            + "el estadio de PostgreSQL. "
+                            + "Volvé a presionar Simular para reintentar "
+                            + "la baja sin repetir el partido.",
+                    e
+            );
+        }
+
+        // También deja de estar disponible dentro del campeonato.
+        stadiums.removeIf(
+                available -> available.getId() == stadium.getId()
+        );
+
+        advanceKnockoutStageIfNeeded();
+
+        pendingKnockoutMatch = null;
+
+        return played;
     }
 
     public static void main(String[] args) throws IOException {

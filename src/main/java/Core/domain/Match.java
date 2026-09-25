@@ -25,6 +25,7 @@ public abstract class Match implements Serializable {
     private Lineup homeLineup;
     private Lineup awayLineup;
     private boolean played;
+    private Stadium stadium;
 
     public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
         this.matchDate = matchDate;
@@ -147,5 +148,27 @@ public abstract class Match implements Serializable {
     public int getMatchday() { return 0; }
     public void setMatchday(int matchday) {
         throw new UnsupportedOperationException("This match does not belong to the group stage.");
+    }
+    public Stadium getStadium() {
+        return stadium;
+    }
+
+    public void setStadium(Stadium stadium) {
+        if (played) {
+            throw new IllegalStateException(
+                    "No se puede cambiar el estadio de un partido jugado."
+            );
+        }
+
+        if (stadium == null) {
+            throw new IllegalArgumentException(
+                    "El estadio es obligatorio."
+            );
+        }
+        this.stadium = new Stadium(
+                stadium.getId(),
+                stadium.getName(),
+                stadium.getCity()
+        );
     }
 }

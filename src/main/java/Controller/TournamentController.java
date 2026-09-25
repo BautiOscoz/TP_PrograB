@@ -195,14 +195,21 @@ public class TournamentController {
         try {
             Match played = championship.simulateNextKnockoutMatch();
             repository.save(championship);
-            phaseLabel.setText(played.getHomeTeam().getName() + " "
-                    + played.getHomeGoals() + " - " + played.getAwayGoals()
-                    + " " + played.getAwayTeam().getName());
+            phaseLabel.setText(
+                    played.getHomeTeam().getName()
+                            + " " + played.getHomeGoals()
+                            + " - " + played.getAwayGoals()
+                            + " " + played.getAwayTeam().getName()
+                            + " | Estadio: " + played.getStadium().getName()
+                            + " | Ciudad: "
+                            + played.getStadium().getCity().getName()
+            );
             zoneTitleLabel.setVisible(false);
             showKnockoutBracket(true);
             buildKnockoutBracket();
             updateSimulationButtons();
         } catch (IllegalStateException | IllegalArgumentException e) {
+            repository.save(championship);
             showError(e.getMessage());
         }
     }
