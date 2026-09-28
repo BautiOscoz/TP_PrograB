@@ -4,10 +4,10 @@ import Core.Run.Championship;
 import Core.domain.FinalMatch;
 import Core.domain.FirstLegMatch;
 import Core.domain.Match;
+import Core.domain.Player;
 import Core.domain.SecondLegMatch;
 import Core.domain.Team;
 import Core.incidents.Incident;
-import Core.incidents.PenaltyShootout;
 import Core.domain.TeamStanding;
 import Core.domain.TournamentZone;
 import Core.persistance.ChampionshipRepository;
@@ -30,6 +30,7 @@ import javafx.stage.WindowEvent;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 import Core.enums.TournamentStage;
 import java.time.LocalDate;
@@ -70,6 +71,7 @@ public class TournamentController {
     @FXML private Button playerStBtn;
     @FXML private Button refereesStBtn;
     @FXML private Button getIDBtn;
+    @FXML private Button venuesBtn;
     @FXML private Button backBtn;
     @FXML private Button simulateMatchdayBtn;
     @FXML private Button simulateKnockoutBtn;
@@ -472,12 +474,12 @@ public class TournamentController {
         winnerBanner.setText("GANADOR: -");
 
         List<FirstLegMatch> firstLegs = championship.getMatches().stream()
-                .filter(FirstLegMatch.class::isInstance)
-                .map(FirstLegMatch.class::cast)
+                .map(Match::asFirstLeg)
+                .filter(Objects::nonNull)
                 .toList();
         List<SecondLegMatch> secondLegs = championship.getMatches().stream()
-                .filter(SecondLegMatch.class::isInstance)
-                .map(SecondLegMatch.class::cast)
+                .map(Match::asSecondLeg)
+                .filter(Objects::nonNull)
                 .toList();
 
         addSeriesCards(quarterColumn, firstLegs, secondLegs, 0, 4);
@@ -486,8 +488,8 @@ public class TournamentController {
         addConnectors(semiConnectorColumn, 2);
 
         championship.getMatches().stream()
-                .filter(FinalMatch.class::isInstance)
-                .map(FinalMatch.class::cast)
+                .map(Match::asFinal)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .ifPresent(finalMatch -> {
                     if (finalMatch.isPlayed()) {
@@ -519,6 +521,20 @@ public class TournamentController {
             } else {
                 column.getChildren().add(createPendingSeriesCard(first, second));
             }
+        }
+    }
+
+    @FXML
+    private void handleVenuesCrud() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/Venues.fxml"));
+            Parent view = loader.load();
+            VenuesController controller = loader.getController();
+            controller.setTournament(championship, tournamentName);
+            tournamentPane.getChildren().setAll(view);
+        } catch (IOException | IllegalStateException exception) {
+            showError("The cities and stadiums screen could not be opened: "
+                    + exception.getMessage());
         }
     }
 
@@ -598,6 +614,11 @@ public class TournamentController {
                     .append(" - ").append(match.getAwayGoals())
                     .append(" ").append(match.getAwayTeam().getName())
                     .append("\nFecha: ").append(match.getMatchDate())
+                    .append("\nEstadio: ")
+                    .append(match.getStadium() == null
+                            ? "No asignado"
+                            : match.getStadium().getName()
+                            + " - " + match.getStadium().getCity().getName())
                     .append("\nFormaciones: ")
                     .append(match.getHomeLineup().getFormation())
                     .append(" / ")
@@ -657,14 +678,7 @@ public class TournamentController {
     }
 
     private boolean isSettledByPenalties(Match match) {
-        boolean flagged = false;
-        if (match instanceof SecondLegMatch secondLeg) {
-            flagged = secondLeg.isSettledByPenalties();
-        } else if (match instanceof FinalMatch finalMatch) {
-            flagged = finalMatch.isSettledByPenalties();
-        }
-
-        if (flagged) {
+        if (match.isSettledByPenalties()) {
             return true;
         }
 
@@ -673,23 +687,24 @@ public class TournamentController {
         }
 
         return match.getIncidents().stream()
-                .anyMatch(incident -> incident instanceof PenaltyShootout);
+                .anyMatch(Incident::isShootoutPenalty);
     }
 
     private int[] getPenaltyScore(Match match) {
         int home = 0;
         int away = 0;
 
-        for (var incident : match.getIncidents()) {
-            if (!(incident instanceof PenaltyShootout penalty)) {
+        for (Incident incident : match.getIncidents()) {
+            if (!incident.isShootoutPenalty()) {
                 continue;
             }
-            if (!penalty.isScored()) {
+            if (!incident.isPenaltyScored()) {
                 continue;
             }
-            if (match.getHomeTeam().getPlayers().contains(penalty.getPlayer())) {
+            Player penaltyTaker = incident.getPenaltyTaker();
+            if (match.getHomeTeam().getPlayers().contains(penaltyTaker)) {
                 home++;
-            } else if (match.getAwayTeam().getPlayers().contains(penalty.getPlayer())) {
+            } else if (match.getAwayTeam().getPlayers().contains(penaltyTaker)) {
                 away++;
             }
         }

@@ -14,6 +14,10 @@ public class FinalMatch extends Match implements Serializable {
         this.settledByPenalties = false;
     }
 
+    @Override
+    public FinalMatch asFinal() { return this; }
+
+    @Override
     public boolean isSettledByPenalties() { return settledByPenalties; }
     public void setSettledByPenalties(boolean settledByPenalties) { this.settledByPenalties = settledByPenalties; }
 }

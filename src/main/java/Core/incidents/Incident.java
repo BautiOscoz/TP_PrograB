@@ -29,4 +29,7 @@ public abstract class Incident implements Serializable {
     public boolean isRedCard() { return false; }
     public Player getPlayerIn() { return null; }
     public Player getPlayerOut() { return null; }
+    public boolean isShootoutPenalty() { return false; }
+    public Player getPenaltyTaker() { return null; }
+    public boolean isPenaltyScored() { return false; }
 }

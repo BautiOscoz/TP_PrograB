@@ -30,19 +30,21 @@
 
 .sidebar {
     -fx-background-color: #0d1b2a;
-    -fx-padding: 22px 12px 18px 12px;
-    -fx-spacing: 8px;
+    -fx-padding: 8px 12px;
+    -fx-spacing: 4px;
 }
 
 .sidebar-title {
     -fx-text-fill: #fef08a;
     -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-padding: 0 0 14px 8px;
+    -fx-padding: 0 0 6px 0;
 }
 
 .menu-button {
-    -fx-pref-height: 38px;
+    -fx-pref-height: 27px;
+    -fx-min-height: 27px;
+    -fx-font-size: 11px;
     -fx-max-width: infinity;
 }
 
@@ -53,12 +55,19 @@
 
 .zone-button {
     -fx-pref-width: 42px;
-    -fx-pref-height: 32px;
+    -fx-pref-height: 26px;
+    -fx-min-height: 26px;
+}
+
+.sidebar > .secondary-button {
+    -fx-pref-height: 27px;
+    -fx-min-height: 27px;
+    -fx-max-width: infinity;
 }
 
 .content-area {
     -fx-background-color: #f3f4f6;
-    -fx-padding: 28px;
+    -fx-padding: 18px 22px;
 }
 
 .page-header {
@@ -244,4 +253,98 @@
     -fx-font-size: 22px;
     -fx-font-weight: bold;
     -fx-padding: 0;
+}
+
+.database-header {
+    -fx-background-color: #f3f4f6;
+    -fx-padding: 18px 22px 12px 22px;
+    -fx-border-color: transparent transparent #d1d5db transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.crud-card {
+    -fx-background-color: white;
+    -fx-padding: 16px;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.08), 12, 0.15, 0, 3);
+}
+
+.form-label-dark {
+    -fx-text-fill: #0d1b2a;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.crud-field {
+    -fx-pref-height: 34px;
+    -fx-background-color: white;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.crud-field:focused {
+    -fx-border-color: #d4af37;
+    -fx-border-width: 1.5px;
+}
+
+.crud-table {
+    -fx-background-color: transparent;
+    -fx-border-color: #dbe2ea;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+}
+
+.crud-table .column-header-background {
+    -fx-background-color: #0d1b2a;
+    -fx-background-radius: 6px 6px 0 0;
+}
+
+.crud-table .column-header,
+.crud-table .filler {
+    -fx-background-color: transparent;
+    -fx-size: 34px;
+}
+
+.crud-table .column-header .label {
+    -fx-text-fill: #fef08a;
+    -fx-font-weight: bold;
+}
+
+.crud-table .table-row-cell:selected {
+    -fx-background-color: #dbeafe;
+    -fx-text-background-color: #0d1b2a;
+}
+
+.record-count {
+    -fx-text-fill: #6b7280;
+    -fx-font-size: 11px;
+}
+
+.danger-button {
+    -fx-background-color: white;
+    -fx-border-color: #b91c1c;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-text-fill: #991b1b;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.danger-button:hover {
+    -fx-background-color: #b91c1c;
+    -fx-text-fill: white;
+}
+
+.button:disabled {
+    -fx-opacity: 0.48;
+}
+
+.crud-actions .button {
+    -fx-pref-width: 100px;
+    -fx-pref-height: 32px;
 }

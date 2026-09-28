@@ -152,7 +152,7 @@ def footer(canvas, doc):
     canvas.line(1.7 * cm, 1.55 * cm, w - 1.7 * cm, 1.55 * cm)
     canvas.setFont("ArialGuide", 7.5)
     canvas.setFillColor(MUTED)
-    canvas.drawString(1.7 * cm, 1.2 * cm, "TP_PrograB - Guía integral - 15/09/2026")
+    canvas.drawString(1.7 * cm, 1.2 * cm, "TP_PrograB - Guía integral - 25/09/2026")
     canvas.drawRightString(w - 1.7 * cm, 1.2 * cm, str(doc.page))
     canvas.restoreState()
 
@@ -162,7 +162,7 @@ story.append(Spacer(1, 1.2 * cm))
 story.append(Paragraph("TP_PrograB", S["CoverTitle"]))
 story.append(Paragraph("Guía integral para entender el programa", S["CoverSub"]))
 P("Diseño, datos, clases, métodos, simulación gradual, persistencia, PostgreSQL, JavaFX, reportes, pruebas y relación con la consigna del trabajo práctico.")
-box("Esta guía describe la versión del código presente en C:\\Java\\TP_PrograB al 15 de septiembre de 2026. No afirma que todo el TP esté terminado: cada funcionalidad pendiente está identificada.")
+box("Esta guía describe la versión del código presente en C:\\Java\\TP_PrograB al 25 de septiembre de 2026, incluidos cambios todavía no confirmados en Git. Distingue lo implementado, lo probado y lo pendiente de validación con PostgreSQL real.")
 H("Cómo leerla")
 B("Primero seguí el recorrido de una partida nueva en los capítulos 1 a 3.")
 B("Después estudiá los objetos de dominio y la simulación en los capítulos 4 a 9.")
@@ -171,7 +171,7 @@ H("La idea central")
 P("<b>Championship</b> es el estado del torneo: contiene equipos, zonas, partidos, árbitros, países, ciudades, estadios, etapa y ganadores. Los controladores JavaFX reciben esa instancia y llaman a operaciones de la lógica. Los partidos simulados y sus incidencias se serializan en <b>campeonato.dat</b>.")
 tbl(["Datos de origen", "Objeto o servicio", "Uso actual"], [
     ["torneo.json", "TournamentLoader + DTO + TournamentData", "Equipos, jugadores, DT, referís y países."],
-    ["PostgreSQL Championship", "CityRepository + StadiumRepository", "Lectura de ciudades y estadios; hoy no se invoca desde la creación JavaFX."],
+    ["PostgreSQL Championship", "CityRepository + StadiumRepository", "Lectura y ABM; carga al crear y administración desde Venues.fxml."],
     ["campeonato.dat", "ChampionshipRepository", "Guardar y cargar la partida en curso por serialización."],
     ["FXML/CSS", "View + Controller", "Pantallas, botones, tablas, cuadro y reportes visibles."],
 ], [3.5, 5.8, 8.2])
@@ -184,9 +184,9 @@ tbl(["Carpeta", "Contenido", "Responsabilidad"], [
     ["Core/domain + Core/enums", "Personas, equipos, partidos, tablas, alineaciones y enums", "Representar las entidades y vocabulario del problema."],
     ["Core/simulation + Core/incidents", "MatchSimulator y seis tipos de incidente", "Crear resultados y registrar hechos del partido."],
     ["Core/persistance + Core/report + Core/console", "Repositorio serializado, reportes y salida temporal", "Guardar/cargar, calcular listados y mostrar diagnósticos."],
-    ["Infrastructure/database", "Conexión JDBC, repositorios y tests manuales", "Leer ciudades y estadios de PostgreSQL."],
+    ["Infrastructure/database", "Conexión JDBC, repositorios y tests manuales", "SELECT, INSERT, UPDATE y DELETE de ciudades/estadios."],
     ["GUI + Controller + resources", "JavaFX, FXML, CSS, imágenes", "Mostrar y operar el torneo mediante interfaz."],
-    ["src/test/java", "ChampionshipTest, StagedSimulationTest", "Pruebas automatizadas sin alterar la partida real."],
+    ["src/test/java", "Tests de campeonato, etapas, desempates y sedes", "Pruebas automatizadas sin alterar la partida real."],
 ], [4.1, 5.3, 8.1])
 H("Dependencias, sin mezclar responsabilidades")
 P("La interfaz conoce a Championship y a los servicios de reporte/guardado. Championship conoce a las clases de dominio, al cargador y al simulador; no debería necesitar saber cómo se pintan botones. Los repositorios JDBC conocen Country, City y Stadium, no el algoritmo deportivo. Esa separación facilita probar reglas sin abrir JavaFX.")
@@ -197,8 +197,10 @@ FXML --> Controller --> Championship --> MatchSimulator --> Match/Incident
                     |        |
                     |        +--> ChampionshipRepository --> campeonato.dat
                     +--> TournamentReportService --> tablas y listados
-PostgreSQL --> CityRepository --> City --> StadiumRepository --> Stadium""", "Mapa conceptual de dependencias; las flechas muestran quién entrega datos a quién")
-box("Ojo: la flecha PostgreSQL no llega todavía al flujo normal de la pantalla. La lectura JDBC se prueba desde StadiumRepositoryTest, pero NewTournamentController no la llama.", True)
+PostgreSQL --> CityRepository --> City --> StadiumRepository --> Stadium
+                    |                              |
+                    +------> VenuesController <----+""", "Mapa conceptual de dependencias; las flechas muestran quién entrega datos a quién")
+box("PostgreSQL ya llega al flujo JavaFX: NewTournamentController intenta cargar sedes y VenuesController administra el ABM. Sin contraseña configurada, el torneo abre con una advertencia en lugar de bloquearse.")
 
 chapter(2, "Cómo arranca la aplicación", "Dos entradas distintas: JavaFX normal y herramientas de consola.")
 H("Entrada JavaFX")
@@ -209,8 +211,9 @@ code("""public class AppLauncher {
     }
 }""", "GUI/AppLauncher.java")
 H("Elegir Nuevo")
-P("MainMenuController carga NewTournament.fxml. Su controlador exige un nombre no vacío. Cuando el usuario confirma, crea <b>new Championship(\"torneo.json\")</b>, guarda ese estado inicial y abre Tournament.fxml. El constructor programa 24 partidos de grupos pero no los juega; por eso una partida nueva empieza con 0 partidos disputados.")
+P("MainMenuController carga NewTournament.fxml. Su controlador exige un nombre no vacío. Cuando el usuario confirma, crea <b>new Championship(\"torneo.json\")</b>, intenta leer ciudades y estadios desde PostgreSQL, guarda el estado inicial y abre Tournament.fxml. El constructor programa 24 partidos de grupos pero no los juega.")
 code("""Championship championship = new Championship(DATA_PATH);
+loadVenues(championship);
 new ChampionshipRepository().save(championship);
 openTournament(championship, tournamentName);""", "Controller/NewTournamentController.java")
 H("Elegir Cargar")
@@ -282,11 +285,13 @@ repository.save(championship);
 showGroupStage();""", "Controller/TournamentController.java")
 H("Tabla de posiciones")
 P("TeamStanding acumula PJ, PG, PE, PP, GF, GC y puntos 3/1/0; DG se calcula GF - GC. getStandings no lee una tabla guardada: crea cuatro TeamStanding nuevos para la zona y vuelve a procesar sus partidos jugados. Eso mantiene la tabla derivada del historial real y permite recalcularla al cargar una partida.")
-box("Pendiente de la consigna: tras puntos, DG y GF, el código usa ranking; debería resolver el empate por el resultado directo entre los equipos. Además la pantalla muestra la tabla actual, pero no conserva la vista antes y después de cada resultado individual.", True)
+H("Desempates completos")
+P("Championship.getStandings ya no contiene todo el algoritmo: crea un <b>StandingsCalculator</b> y le entrega la zona y los partidos. El calculador ordena primero por puntos, diferencia de gol y goles a favor. Cuando dos o más equipos siguen exactamente iguales, resolveTie construye una mini tabla usando solo sus enfrentamientos. Allí compara puntos, DG y GF; el ranking continental queda como último recurso determinista. getFirst y getSecond usan este mismo resultado, por lo que la clasificación a cuartos recibe el desempate corregido.")
+small("Código real: Championship.getStandings crea new StandingsCalculator() y retorna calculator.calculate(zone, matches). El algoritmo vive en Core/classification/StandingsCalculator.java.")
 
 chapter(6, "Partidos e incidencias", "La diferencia entre programación, resultado y hechos observables.")
 H("La clase base Match")
-P("Match es abstracta y guarda fecha, equipos, referí, marcador, lista de Incident, alineaciones iniciales y boolean played. Al crearse, el marcador es 0-0 y played=false; esos ceros son un valor inicial, no un resultado. MatchSimulator.setPlayed(true) solo al final de la simulación. getIncidents devuelve una lista no modificable para que otras capas lean el historial sin añadir incidencias directamente.")
+P("Match es abstracta y guarda fecha, equipos, referí, Stadium opcional, marcador, lista de Incident, alineaciones iniciales y boolean played. Al crearse, el marcador es 0-0 y played=false. addIncident reordena por minuto y getIncidents devuelve una lista no modificable.")
 H("Cuatro clases de partido")
 tbl(["Tipo", "Datos particulares", "Qué representa"], [
     ["GroupMatch", "matchday; isGroupStage=true", "Un encuentro único de zona; afecta la tabla."],
@@ -301,7 +306,9 @@ code("""for (Incident incident : match.getIncidents()) {
     if (scorer != null) { /* sumar gol de partido */ }
 }""", "Polimorfismo usado por TournamentReportService")
 P("Los tiros de una tanda son PenaltyShootout, no Goal. Por eso el ranking de goleadores cuenta goles durante el encuentro y no los de la definición. Goal de penal durante los 90 minutos sí cuenta; Goal en contra retorna null como goleador en el ranking.")
-box("Las incidencias se almacenan, pero el simulador genera goles, tarjetas y cambios en grupos separados. El minuto no gobierna un estado de jugadores en cancha; por eso puede haber inconsistencias cronológicas que el siguiente trabajo de corrección debe resolver.", True)
+H("Quién estaba realmente en cancha")
+P("Match.getPlayersOnField(team, minute) parte del once inicial y reproduce sustituciones y expulsiones hasta el minuto solicitado. Un cambio quita al que sale y agrega al que entra; una roja elimina al expulsado. MatchSimulator reutiliza esa consulta para tarjetas, cambios, goles y penales, evitando acciones posteriores de un jugador que ya no estaba habilitado.")
+box("Los hechos ya se almacenan cronológicamente. ChampionshipTest comprueba además que cada goleador estuviera en cancha en el minuto de su gol.")
 
 chapter(7, "Alineaciones y simulación de 90 minutos", "De una formación disponible a un partido con marcador y hechos.")
 H("FormationType y Lineup")
@@ -313,12 +320,16 @@ code("""List<FormationType> validFormation = Arrays.stream(FormationType.values(
 return validFormation.get(random.nextInt(validFormation.size()));""", "Core/simulation/MatchSimulator.java, extracto")
 H("Fuerza, sorpresa y goles")
 P("El simulador calcula homeStrength = fuerza del equipo local + 3 y awayStrength = fuerza visitante. Añade surprise = random.nextGaussian() * 12. Luego estima goles para cada uno, limita la expectativa entre 0,25 y 3,5 y la transforma en un conteo aleatorio mediante productos de random.nextDouble(). Un equipo inferior puede ganar por el término sorpresa y el muestreo de goles.")
+H("Plan cronológico de hechos")
+P("Para cada equipo, MatchSimulator crea PlannedIncident con minuto y tipo YELLOW_CARD, RED_CARD o SUBSTITUTION. Ordena esos planes y los ejecuta consultando getPlayersOnField. Una sustitución busca un jugador activo y un suplente habilitado de la misma posición; una segunda amarilla genera roja; los goleadores se eligen entre quienes estaban presentes en su minuto.")
 H("Qué se registra")
 B("Cada gol se agrega como Goal con minuto 1-90, autor, arquero rival, marca de penal y eventual marca de gol en contra.")
 B("Tarjetas amarillas/rojas incluyen jugador y minuto; algunas rojas activan isSuspended para el siguiente encuentro.")
 B("Hasta tres sustituciones por equipo se intentan con un suplente de la misma Position que el jugador que sale.")
 B("Al finalizar se asigna played=true; antes de ese punto el partido no debe aparecer como resultado en la interfaz.")
-box("Pendiente P0: serveSuspensionIfNeeded limpia la sanción durante la selección de titulares, pero addSubstitutions reconstruye el banco desde todo el plantel. El sancionado podría volver como suplente en el encuentro que debía perderse.", True)
+H("Cómo se cumple una suspensión")
+P("Antes de construir Lineup, simulate toma una fotografía de los suspendidos. Lineup los excluye del once y limpia la marca al considerar cumplida la fecha; la fotografía se conserva y también los excluye del banco. Así el jugador se pierde exactamente ese partido y queda disponible para el siguiente. ChampionshipTest verifica las tres condiciones.")
+box("Suspensiones y cronología están implementadas y probadas. Los minutos de participación de reportes todavía merecen casos extremos con varias incidencias en el mismo minuto.")
 
 chapter(8, "Eliminatorias: un partido por clic", "8 cuartos + 4 semifinales + 1 final = 13 encuentros.")
 H("Programar sin jugar")
@@ -333,15 +344,12 @@ tbl(["Pulsaciones", "Qué ocurre", "Estado luego del bloque"], [
 ], [3.0, 8.7, 5.8])
 H("El método central")
 P("simulateNextKnockoutMatch verifica que grupos estén completos y que el torneo no esté terminado. Busca el primer Match no grupal con played=false, juega exclusivamente ese encuentro, llama advanceKnockoutStageIfNeeded para preparar lo que corresponda y devuelve el partido recién jugado. TournamentController lo guarda y reconstruye el cuadro. El test verifica que cada llamada suma exactamente uno al número de partidos jugados.")
-code("""Match next = matches.stream()
-    .filter(match -> !match.isGroupStage() && !match.isPlayed())
-    .findFirst().orElseThrow();
-matchSimulator.simulate(next);
-advanceKnockoutStageIfNeeded();
-return next;""", "Core/Run/Championship.java, lógica esencial")
+small("Código real: el método busca el primer partido no grupal con played=false, carga y asigna una sede disponible, llama MatchSimulator.simulate, confirma la baja de la sede y luego ejecuta advanceKnockoutStageIfNeeded.")
 H("Por qué se crean las vueltas después de las idas")
 P("SecondLegMatch almacena el resultado de la ida. Por eso no puede construirse correctamente antes de que esa ida sea jugada. Cuando terminan las cuatro idas, scheduleSecondLegs invierte local/visitante, añade siete días y copia los goles del primer encuentro. Se juega una vuelta por clic y recién después de todas se clasifican los ganadores.")
-box("La lista de partidos está ordenada por programación de rondas: cuatro idas, cuatro vueltas, dos idas, dos vueltas y final. El cuadro JavaFX separa FirstLegMatch y SecondLegMatch para formar cada serie; no confunde dos idas distintas con ida y vuelta.")
+H("Una sede distinta por encuentro")
+P("Cada Match eliminatorio posee Stadium. Al presionar Simular, Championship consulta nuevamente PostgreSQL, elige al azar uno de los estadios todavía disponibles, lo copia dentro del partido y recién entonces ejecuta MatchSimulator. Después intenta eliminar esa sede de la tabla estadio. Como la siguiente simulación vuelve a consultar la base, una sede eliminada ya no puede salir otra vez. Para completar las 13 eliminatorias sin reponer registros deben existir al menos 13 estadios.")
+small("La unicidad depende del ciclo PostgreSQL real: SELECT de disponibles, elección, simulación y DELETE. Esta edición no conserva el antiguo VenueAssignmentTest en memoria porque ya no representaba ese funcionamiento.")
 
 chapter(9, "Cómo se decide un ganador", "El reglamento del TP no es necesariamente el del fútbol actual.")
 H("Cuartos y semifinales: tres criterios")
@@ -358,8 +366,8 @@ P("Si A gana la ida 1-0 y B gana la vuelta 2-1, ambos suman tres puntos. Los gol
 H("Final")
 P("FinalMatch es único. Si su marcador tras 90 minutos no empata, gana el de más goles. Si empata, se marca settledByPenalties y se decide por tanda. Se guardan cada pateador y si convirtió o falló como PenaltyShootout.")
 H("Tanda y lectura posterior")
-P("La tanda actual sortea cada remate con probabilidad 0,75 de conversión: cinco intentos iniciales por equipo y, si continúa el empate, muerte súbita. getRecordedSeriesWinner y getRecordedFinalWinner leen el resultado y las incidencias guardadas sin volver a tirar penales. Eso permite pintar el cuadro tras cargar la partida sin cambiar el campeón.")
-box("Pendiente P1: la lista de pateadores sale del once inicial, no del conjunto realmente habilitado al finalizar el partido tras cambios y expulsiones. También falta mostrar de forma explícita el criterio ganador (puntos, DG ponderada o penales) en todas las vistas.", True)
+P("La tanda sortea cada remate con probabilidad 0,75: cinco intentos iniciales por equipo y luego muerte súbita. Los pateadores salen de match.getPlayersOnField(team, 90), por lo que incluyen cambios válidos y excluyen expulsados. getRecordedSeriesWinner y getRecordedFinalWinner leen el resultado guardado sin volver a ejecutar la tanda.")
+box("Todavía falta mostrar de forma explícita el criterio ganador (puntos, DG ponderada o penales) en todas las vistas, aunque el cálculo esté implementado.", True)
 
 chapter(10, "Guardar, cargar y continuar", "campeonato.dat conserva el estado de la partida; PostgreSQL cumple otra función.")
 H("Serialización")
@@ -376,25 +384,40 @@ B("Grupos: después de cada fecha, incluidos sus ocho resultados y el eventual p
 B("Eliminatorias: después de cada encuentro y de programar la ronda siguiente si correspondió.")
 B("Al volver al menú o cerrar la ventana del torneo: TournamentController solicita otro guardado.")
 H("Prueba de continuidad")
-P("StagedSimulationTest serializa/deserializa en memoria después de cada fecha y de cada encuentro eliminatorio. Comprueba 24 + 13 = 37 partidos únicos, un campeón persistente y rechazo de un nuevo avance tras FINISHED. La prueba no modifica campeonato.dat. La prueba visual de JavaFX y la conexión real a PostgreSQL son verificaciones separadas.")
+P("StagedSimulationTest conserva las comprobaciones de 24 + 13 = 37 partidos, campeón persistente y rechazo de un avance tras FINISHED. Sin embargo, el flujo eliminatorio actual consulta PostgreSQL antes de cada encuentro; por eso esta prueba dejó de ser completamente aislada y necesita driver, contraseña y datos de sedes para recorrer el torneo completo. ChampionshipTest y StandingsTieBreakerTest sí pasaron en esta revisión sin escribir en la base.")
 box("Limitación: la semilla/posición interna del Random no se persiste. Se conservan resultados ya jugados, pero el azar para partidos futuros se recrea al cargar. ChampionshipRepository atrapa errores de lectura/escritura y los imprime, pero no los propaga al controlador.", True)
 
-chapter(11, "Base de datos PostgreSQL", "La lectura de sedes está implementada; la administración y uso deportivo no.")
+chapter(11, "Base de datos PostgreSQL y ABM", "Lectura, escritura, pantalla administrativa y uso deportivo de las sedes.")
 H("JDBC, paso a paso")
 P("DatabaseConnection.connect carga org.postgresql.Driver, lee CHAMPIONSHIP_DB_PASSWORD del entorno y abre jdbc:postgresql://localhost:5432/Championship con usuario postgres. La contraseña no está escrita en el fuente. Si falta la variable o el driver, se informa un error.")
 code("""String password = System.getenv("CHAMPIONSHIP_DB_PASSWORD");
 return DriverManager.getConnection(
         "jdbc:postgresql://localhost:5432/Championship",
         "postgres", password);""", "Infrastructure/database/DatabaseConnection.java, extracto")
-H("CityRepository.findAll")
-P("Ejecuta SELECT de ciudad JOIN pais. Por cada fila obtiene id long, nombre de ciudad y nombre de país. Busca Country del catálogo JSON (equalsIgnoreCase) y crea City(id, name, country). Usa try-with-resources para cerrar Connection, PreparedStatement y ResultSet. No ejecuta INSERT, UPDATE ni DELETE.")
-H("StadiumRepository.findAll")
-P("Ejecuta SELECT de estadio JOIN ciudad JOIN pais. Cada fila trae estadio.id, estadio.nombre y ciudad.id. Busca la City ya cargada por ID y crea Stadium(id, name, city). No crea una ciudad duplicada. La relación refleja la estructura observada: estadio.ciudad -> ciudad.id y ciudad.id_pais -> pais.id.")
-H("Cómo se integra con Championship hoy")
-P("Championship.loadVenues valida que cada Stadium apunte a alguna City de la lista y copia ciudades/estadios a sus campos. StadiumRepositoryTest demuestra ese recorrido. Sin embargo, NewTournamentController y TournamentController no invocan CityRepository ni StadiumRepository en el flujo normal; al crear por JavaFX, las listas de sedes empiezan vacías.")
-box("La consigna exige ABM de ciudades/estadios y 13 sedes eliminatorias seleccionadas al azar sin repetición. Hoy faltan ambos: los repositorios solo leen y Match no tiene un campo Stadium. El botón Cities/Stadiums CRUD apunta al handler de Knockout Stage.", True)
+H("Lectura relacional")
+P("CityRepository.findAll ejecuta SELECT de ciudad JOIN pais, busca el Country del catálogo JSON por nombre y crea City(id, name, country). StadiumRepository.findAll ejecuta SELECT de estadio JOIN ciudad JOIN pais, reutiliza la City ya cargada por ID y crea Stadium(id, name, city). Los try-with-resources cierran Connection, PreparedStatement y ResultSet.")
+H("Alta, modificación y baja")
+tbl(["Repositorio", "Operación", "SQL y validación"], [
+    ["CityRepository", "create", "INSERT ciudad(nombre,id_pais) RETURNING id; resuelve pais por nombre."],
+    ["CityRepository", "update", "UPDATE nombre/id_pais por ID; exige nombre y Country."],
+    ["CityRepository", "delete", "Cuenta estadios; rechaza la baja si existe alguno asociado."],
+    ["StadiumRepository", "create", "INSERT estadio(nombre,ciudad) RETURNING id."],
+    ["StadiumRepository", "update", "UPDATE nombre/ciudad por ID."],
+    ["StadiumRepository", "delete", "DELETE por ID; la pantalla bloquea sedes asignadas a partidos."],
+], [4.2, 3.2, 10.1])
+P("Todos los valores de usuario se envían mediante PreparedStatement, no concatenando texto SQL. CityRepository consulta pais.id porque Country no guarda el ID relacional. Si el país del JSON no existe en la tabla pais, la operación se rechaza con un mensaje claro.")
+H("Venues.fxml y VenuesController")
+P("El botón Cities/Stadiums CRUD carga Venues.fxml. La pantalla presenta dos tarjetas con tabla y formulario: ciudad con país y estadio con ciudad. Muestra contadores de registros, filas seleccionadas con contraste y mensajes cuando una tabla está vacía. Update y Delete permanecen deshabilitados hasta seleccionar una fila; Add, Update y Delete llaman al repositorio correspondiente y las bajas piden confirmación. Volver reconstruye Tournament.fxml con la misma instancia Championship y la guarda.")
+H("Carga automática y tolerancia a fallos")
+P("NewTournamentController.loadVenues consulta primero ciudades y luego estadios, llama championship.loadVenues y continúa con el guardado. Si PostgreSQL o la contraseña fallan, muestra una advertencia pero deja crear el torneo. Dentro del ABM, cada modificación vuelve a leer ambas listas, actualiza Championship y guarda campeonato.dat.")
+H("Uso deportivo")
+P("Match incorpora Stadium y no permite cambiarlo una vez jugado. Antes de cada eliminatoria, reloadVenuesFromDatabase ejecuta CityRepository.findAll y StadiumRepository.findAll. Se elige una sede al azar, se simula el encuentro y completePendingKnockoutMatch ejecuta DELETE. Si la baja falla, pendingKnockoutMatch conserva el partido ya jugado: el siguiente clic reintenta solamente la baja y no genera otro resultado. showMatchDetails presenta estadio y ciudad junto con fecha, formaciones e incidencias.")
+small("Validación pendiente: el código compila y el FXML es válido, pero CHAMPIONSHIP_DB_PASSWORD no estaba disponible en esta terminal. El ciclo real SELECT/INSERT/UPDATE/DELETE y las 13 bajas automáticas deben probarse contra Championship.")
 
-chapter(12, "Reportes y estadísticas", "Los valores se calculan de partidos jugados e incidencias; no son los históricos del JSON.")
+story.append(Spacer(1, 12))
+story.append(Paragraph("12. Reportes y estadísticas", S["Chapter"]))
+small("Los valores se calculan de partidos jugados e incidencias; no son los históricos del JSON.")
+story.append(HRFlowable(width="100%", thickness=0.8, color=LINE, spaceAfter=12))
 H("TournamentReportService")
 P("Es un servicio de consulta: recibe Championship, recorre getPlayedMatches y construye filas para distintos listados. Los controladores convierten las filas a texto en reportArea. Al consultar en cualquier momento, los reportes reflejan solo lo disputado hasta entonces.")
 tbl(["Método", "Fuente del cálculo", "Vista actual"], [
@@ -408,14 +431,15 @@ tbl(["Método", "Fuente del cálculo", "Vista actual"], [
 H("Filas auxiliares")
 P("TopScorerRow, ParticipationRow, FairPlayRow, TeamStatsRow, PlayerStatsRow y RefereeStatsRow son clases internas de TournamentReportService. Representan un renglón de salida con getters; no se serializan como parte esencial del torneo ni son tablas de PostgreSQL.")
 H("Cuidado con la participación")
-P("getPlayedMinutes devuelve 90 para un titular salvo que encuentre una sustitución o roja; a un suplente le atribuye 90 - minuto de entrada. Como los hechos pueden estar desordenados cronológicamente y se revisa la primera incidencia coincidente, minutos y apariciones necesitan revisión antes de declararse exactos. Las estadísticas históricas de Player.statistics no se suman a las del campeonato.")
+P("getPlayedMinutes devuelve 90 para un titular salvo sustitución o roja; a un suplente le atribuye 90 - minuto de entrada. Las incidencias ahora llegan ordenadas y coherentes con el campo, pero conviene agregar pruebas específicas para expulsión de suplentes, cambios múltiples y hechos en el mismo minuto antes de declarar todos los promedios exactos. Los históricos de Player.statistics no se suman al campeonato.")
 box("Pendiente de la consigna: identificaciones PDF con foto/código de barras, filtro Todos/una Position, promedio de goles recibidos por arquero, promedio de años de referato al pie y exposición completa de edad/nacionalidad del DT en la vista. Get Identifications es aún un aviso, no un PDF.", True)
 
 chapter(13, "Interfaz JavaFX de punta a punta", "FXML diseña; Controller responde; Championship resuelve las reglas.")
-H("Los tres FXML")
+H("Los cuatro FXML")
 B("MainMenu.fxml: Nuevo, Cargar, Stats y Exit. Stats del menú todavía imprime un mensaje pendiente.")
 B("NewTournament.fxml: nombre y confirmación; el nombre se usa en la sesión, no queda persistido.")
 B("Tournament.fxml: barra lateral de grupos, fechas, knockout, partido siguiente, rankings y reportes; tabla de posiciones, área de resultados, cuadro y reportArea.")
+B("Venues.fxml: tablas y formularios para altas, modificaciones y bajas de ciudades y estadios.")
 P("style.css y las imágenes BackroundImage.jpg/Trophy.gif son presentación. Cambiar colores o animaciones no cambia los puntos, clasificación o resultados. FXMLLoader une fx:id con campos @FXML y onAction con métodos del controlador.")
 H("Qué hace TournamentController")
 B("setTournament conserva Championship, programa cuartos si corresponde a un guardado previo, muestra grupos y actualiza habilitación de botones.")
@@ -424,6 +448,7 @@ B("handleSimulateKnockoutMatch juega un único encuentro, guarda, reconstruye el
 B("handleKnockoutStage solo cambia de vista; no simula partidos al abrir el cuadro.")
 B("buildKnockoutBracket arma tarjetas de series pendientes, parcialmente jugadas y resueltas; un clic en una tarjeta jugada abre formaciones e incidencias.")
 B("handleTopScorers, handleFairPlay y demás handlers llaman al servicio de reportes y muestran texto.")
+B("handleVenuesCrud carga Venues.fxml y entrega la misma Championship; VenuesController refresca PostgreSQL y vuelve sin perder el torneo.")
 H("Visibilidad y distribución")
 P("showGroupTable muestra tabla y matchdayResultsArea. showReport muestra reportArea. showKnockoutBracket muestra el cuadro. Cada uno usa visible y managed: ocultar sin setManaged(false) dejaría espacio vacío. showZone cambia la zona de la tabla sin re-simular partidos.")
 code("""<Button fx:id="simulateMatchdayBtn"
@@ -441,6 +466,7 @@ tbl(["Clase", "Carpeta", "Papel exacto"], [
     ["MainMenuController", "Controller", "Navega Nuevo/Cargar; Exit; Stats del menú pendiente."],
     ["NewTournamentController", "Controller", "Valida nombre, construye Championship, guarda y abre torneo."],
     ["TournamentController", "Controller", "Botones de fechas/partidos, tablas, cuadro, incidentes, reportes y guardado."],
+    ["VenuesController", "Controller", "ABM JDBC de ciudades/estadios y regreso al torneo activo."],
     ["Main", "Core/Run", "Chequeo básico del JSON por consola; no es la GUI."],
     ["Championship", "Core/Run", "Estado y coordinación deportiva de todas las etapas."],
     ["TournamentLoader", "Core/loader", "Gson, DTO -> Country/Team/Coach/Player/Referee."],
@@ -469,12 +495,12 @@ tbl(["Clase", "Carpeta", "Papel exacto"], [
     ["Referee", "Core/domain", "Referí: Country y años en el referato."],
     ["Country", "Core/domain", "País por nombre; igualdad insensible a mayúsculas."],
     ["City", "Core/domain", "Ciudad con ID long y Country; leída desde PostgreSQL."],
-    ["Stadium", "Core/domain", "Estadio con ID long y City; no asociado aún a Match."],
+    ["Stadium", "Core/domain", "Estadio con ID long y City; sede asignable a Match eliminatorio."],
     ["Team", "Core/domain", "Equipo con plantel, DT, ranking y fuerza competitiva."],
     ["TournamentZone", "Core/domain", "Zona A-D con cuatro Teams; protege su lista."],
     ["TeamStanding", "Core/domain", "Tabla derivada de partidos grupales jugados."],
     ["Lineup", "Core/domain", "Formación y once titulares por equipo."],
-    ["Match", "Core/domain", "Base abstracta de resultado, lineups e incidencias."],
+    ["Match", "Core/domain", "Base abstracta de resultado, estadio, lineups e incidencias cronológicas."],
     ["GroupMatch", "Core/domain", "Partido de zona identificado por fecha/jornada."],
     ["FirstLegMatch", "Core/domain", "Ida de una serie eliminatoria."],
     ["SecondLegMatch", "Core/domain", "Vuelta con marcador anterior y marca de penales."],
@@ -488,7 +514,7 @@ P("Person/Player/Coach/Referee y Match/GroupMatch/FirstLegMatch/SecondLegMatch/F
 
 chapter(16, "Catálogo: simulación, incidencias y servicios", "Dónde se calcula cada efecto del torneo.")
 tbl(["Clase", "Carpeta", "Papel exacto"], [
-    ["MatchSimulator", "Core/simulation", "Elige formación, muestrea goles y genera tarjetas/cambios."],
+    ["MatchSimulator", "Core/simulation", "Formación, suspensión, plan cronológico, goles, tarjetas y cambios válidos."],
     ["Incident", "Core/incidents", "Base abstracta con minuto y consultas polimórficas."],
     ["Goal", "Core/incidents", "Gol de partido, autor, arquero, penal y gol en contra."],
     ["YellowCard", "Core/incidents", "Amonestación: jugador y 1 punto Fair Play."],
@@ -500,11 +526,13 @@ tbl(["Clase", "Carpeta", "Papel exacto"], [
     ["MatchConsoleReporter", "Core/console", "Imprime formación, eventos y marcador; apoyo temporal."],
     ["StandingsConsoleReporter", "Core/console", "Imprime tabla por zona en el flujo terminal."],
     ["DatabaseConnection", "Infrastructure/database", "Conexión JDBC a Championship; contraseña por entorno."],
-    ["CityRepository", "Infrastructure/database", "SELECT ciudad + pais, mapeo a City con Country JSON."],
-    ["StadiumRepository", "Infrastructure/database", "SELECT estadio + ciudad, mapeo a Stadium con City existente."],
+    ["CityRepository", "Infrastructure/database", "SELECT/INSERT/UPDATE/DELETE y restricción de ciudad con estadios."],
+    ["StadiumRepository", "Infrastructure/database", "SELECT/INSERT/UPDATE/DELETE; PostgreSQL genera el ID del estadio."],
     ["DatabaseTest", "Infrastructure/database", "Test manual para confirmar conexión PostgreSQL."],
     ["CityRepositoryTest", "Infrastructure/database", "Test manual de lectura de ciudades."],
     ["StadiumRepositoryTest", "Infrastructure/database", "Test manual City -> Stadium -> Championship.loadVenues."],
+    ["StandingsTieBreakerTest", "src/test/java", "Empate total, enfrentamiento directo y ranking de respaldo."],
+    ["StandingsCalculator", "Core/classification", "Calcula la tabla y resuelve desempates fuera de Championship."],
     ["Paths", "Utils", "Constante de ruta del FXML de menú; casi no interviene."],
 ], [4.5, 3.7, 9.3])
 P("Las seis Row internas de TournamentReportService son objetos de presentación de resultados calculados, no entidades persistentes de PostgreSQL. Cada handler de TournamentController elige el reporte, transforma sus filas en líneas legibles y las coloca en reportArea.")
@@ -523,30 +551,32 @@ tbl(["Momento", "Championship.getMatches", "getPlayedMatches", "stage y efecto v
 ], [4.2, 3.3, 3.0, 7.0])
 H("Qué no se duplica al cargar")
 P("Los GroupMatch tienen played=true tras su fecha y getCurrentMatchday ignora los jugados. scheduleQuarterFinals detecta FirstLegMatch previos. simulateNextKnockoutMatch busca solo el primer no jugado y prohíbe avanzar desde FINISHED. El estado de ganadores y stage queda serializado. La prueba StagedSimulationTest hace varios cierres/cargas en memoria para comprobar ese comportamiento.")
+H("Qué ocurre con las sedes durante el recorrido")
+P("Al crear, NewTournamentController intenta cargar PostgreSQL. Los 24 partidos de zona no requieren Stadium. En cada clic eliminatorio se recarga la lista disponible, se elige una sede al azar y se elimina después de usarla. Por eso no se asignan anticipadamente las sedes de toda una ronda: el estado vigente de PostgreSQL decide la sede del partido actual.")
 H("Si algo no aparece")
 B("Si Nuevo parece iniciar un torneo terminado, verificá que estés ejecutando este proyecto y no otra copia; NewTournamentController actual no llama simulateGroupStage.")
 B("Si el botón de fecha está deshabilitado, comprobá hasPendingGroupMatchdays() y si el archivo cargado ya completó grupos.")
 B("Si el botón eliminatorio está deshabilitado, revisá getStage(): GROUP_STAGE y FINISHED lo deshabilitan.")
-B("Si una sede no aparece, recordá que la interfaz aún no realiza la lectura JDBC automática.")
+B("Si una sede no aparece, comprobá CHAMPIONSHIP_DB_PASSWORD, la base Championship y que todavía existan estadios disponibles. Para completar el torneo sin volver a cargarlos se necesitan 13.")
 box("La diferencia entre getMatches (programados) y getPlayedMatches (resultados reales) es la clave para leer esta guía y para depurar la interfaz.")
 
 chapter(18, "Relación con la consigna y pendientes", "No confundas una clase existente con un requisito ya cumplido de punta a punta.")
 tbl(["Requisito de la consigna", "Estado en este código", "Qué falta o verificar"], [
     ["16 equipos, zonas balanceadas, 24 grupos", "Implementado", "Pruebas adicionales de sorteo y entrada inválida."],
-    ["Simulación no determinística, alineación, goles/incidencias", "Implementado en base", "Suspensión real y cronología de participantes."],
+    ["Simulación no determinística, alineación, goles/incidencias", "Implementado y probado", "Revisión visual y casos extremos de minutos."],
     ["Avance por fechas y luego por encuentro", "Implementado", "Prueba manual JavaFX y experiencia de usuario."],
     ["Guardado para retomar estadio", "Implementado y probado en memoria", "Prueba real con campeonato.dat y errores de IO."],
-    ["Desempate de grupos por enfrentamiento directo", "Incompleto", "Sustituir ranking como último criterio."],
+    ["Desempate de grupos por enfrentamiento directo", "Implementado y probado", "Mostrar criterio aplicado en la interfaz."],
     ["Tabla antes/después de cada resultado", "Incompleto", "Mostrar comparación individual en JavaFX."],
-    ["Ganador por puntos, DG visitante doble, penales", "Reglas básicas implementadas", "Exponer criterio; pateadores habilitados; casos controlados."],
-    ["Estadios al azar sin repetir en 13 encuentros", "No integrado", "Carga JDBC normal, Stadium en Match y asignación única."],
-    ["ABM ciudad/estadio en PostgreSQL", "No implementado", "INSERT/UPDATE/DELETE y restricción de ciudad con estadios."],
+    ["Ganador por puntos, DG visitante doble, penales", "Implementado", "Exponer criterio ganador en todas las vistas."],
+    ["Estadios al azar sin repetir en 13 encuentros", "Implementado en código", "Recorrido real completo contra PostgreSQL."],
+    ["ABM ciudad/estadio en PostgreSQL", "Implementado en código", "Prueba manual de escritura contra PostgreSQL real."],
     ["Rankings, listados y cuadro", "Parcial", "Exactitud minutos; filtros/promedios/campos faltantes."],
     ["Identificaciones PDF foto/barcode", "Pendiente", "Generación y datos/fotografías."],
     ["Documentación/ágil/inglés/presentación", "Fuera del flujo funcional", "Verificar evidencias y entregables con el grupo."],
 ], [5.3, 4.0, 8.2])
 H("Siguiente corrección prioritaria")
-P("Primero corregir que una roja/suspensión excluya al jugador de titulares <b>y</b> suplentes en el siguiente partido. Después ordenar cronológicamente cambios/expulsiones para conocer quién estaba habilitado al minuto de cada gol y al final para una tanda. Recién sobre esa base conviene certificar minutos, pateadores, estadísticas y reportes como exactos.")
+P("La base deportiva crítica ya incorpora suspensiones, cronología, pateadores y desempate directo. La prioridad pasa a validar el ABM con la base real, completar identificaciones PDF y cerrar los campos/filtros faltantes de reportes. También debe mostrarse el criterio de cada clasificación y la tabla antes/después de cada resultado individual.")
 box("Esta guía explica lo existente y señala lo pendiente. No equivale por sí sola a declarar aprobado el TP; la consigna exige funcionalidad completa, validaciones, interfaz amigable, trabajo grupal e inglés.", True)
 
 chapter(19, "Dónde mirar y cómo estudiarlo", "Ruta corta para volver del PDF al código sin perderse.")
@@ -560,6 +590,8 @@ tbl(["Pregunta", "Abrí primero", "Después mirá"], [
     ["¿Cómo avanza un partido?", "Championship: simulateNextKnockoutMatch", "advanceKnockoutStageIfNeeded y TournamentController."],
     ["¿Por qué no se repite al cargar?", "ChampionshipRepository + readResolve", "stage, played y StagedSimulationTest."],
     ["¿Qué viene de PostgreSQL?", "Infrastructure/database/*Repository", "City, Stadium y loadVenues."],
+    ["¿Dónde está el ABM?", "Controller/VenuesController.java", "Venues.fxml y métodos create/update/delete."],
+    ["¿Cómo se asigna una sede?", "Championship: simulateNextKnockoutMatch", "reloadVenuesFromDatabase, Match.stadium y DELETE posterior."],
     ["¿Cómo funciona un ranking?", "Core/report/TournamentReportService.java", "Incident polimórfico y handlers de reportArea."],
 ], [4.4, 6.5, 6.6])
 H("Preguntas para defender el diseño")
@@ -567,9 +599,11 @@ B("Explicá por qué DTO no es Team: el primero refleja la forma del JSON; el se
 B("Explicá por qué TeamStanding se recalcula desde resultados jugados y no desde los históricos de Player.statistics.")
 B("Explicá la diferencia entre crear un partido pendiente y simularlo; played es el indicador del resultado real.")
 B("Explicá por qué una vuelta nace después de las idas y por qué una serie puede requerir una tanda.")
+B("Explicá por qué el ABM usa PreparedStatement y por qué no puede borrarse una ciudad con estadios.")
+B("Explicá por qué borrar de PostgreSQL la sede usada impide que vuelva a aparecer en el SELECT del partido siguiente.")
 B("Mostrá herencia, polimorfismo y encapsulamiento con ejemplos concretos de Person, Match e Incident.")
 H("Fuentes y límites de esta edición")
-P("Código fuente local en C:\\Java\\TP_PrograB\\src\\main\\java y src\\main\\resources; pruebas en src\\test\\java. Consigna local TPGrupal-2026-Campeonato Futbol (1).pdf, requisitos de páginas 3-7 y 9-10. Se describe el código disponible al 15/09/2026; no se inspeccionó en vivo pgAdmin ni se dio por hecha la integración de sedes, ABM o identificación PDF.")
+P("Código fuente local en C:\\Java\\TP_PrograB\\src\\main\\java y src\\main\\resources; pruebas en src\\test\\java. Consigna local TPGrupal-2026-Campeonato Futbol (1).pdf, requisitos de páginas 3-7 y 9-10. Se describe el código integrado al 25/09/2026. La compilación, el FXML, ChampionshipTest y StandingsTieBreakerTest pasaron; no se ejecutaron escrituras ni el recorrido eliminatorio completo porque CHAMPIONSHIP_DB_PASSWORD no estaba configurada. Identificaciones PDF sigue pendiente.")
 
 doc = SimpleDocTemplate(
     str(OUTPUT), pagesize=A4,

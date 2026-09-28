@@ -73,6 +73,73 @@ public class StadiumRepository {
         return stadiums;
     }
 
+    public Stadium create(String name, City city) throws SQLException {
+        validateStadium(name, city);
+        String sql = """
+                INSERT INTO estadio (nombre, ciudad)
+                VALUES (?, ?)
+                RETURNING id
+                """;
+
+        try (Connection connection = DatabaseConnection.connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, name.trim());
+            statement.setLong(2, city.getId());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    throw new SQLException("The stadium could not be created.");
+                }
+                return new Stadium(resultSet.getLong("id"), name.trim(), city);
+            }
+        }
+    }
+
+    public boolean update(Stadium stadium) throws SQLException {
+        if (stadium == null) {
+            throw new IllegalArgumentException("A stadium is required.");
+        }
+        validateId(stadium.getId());
+        validateStadium(stadium.getName(), stadium.getCity());
+        String sql = """
+                UPDATE estadio
+                SET nombre = ?, ciudad = ?
+                WHERE id = ?
+                """;
+
+        try (Connection connection = DatabaseConnection.connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, stadium.getName().trim());
+            statement.setLong(2, stadium.getCity().getId());
+            statement.setLong(3, stadium.getId());
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    public boolean delete(long stadiumId) throws SQLException {
+        validateId(stadiumId);
+        String sql = "DELETE FROM estadio WHERE id = ?";
+        try (Connection connection = DatabaseConnection.connect();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, stadiumId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    private void validateStadium(String name, City city) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("The stadium name is required.");
+        }
+        if (city == null || city.getId() <= 0) {
+            throw new IllegalArgumentException("A city is required.");
+        }
+    }
+
+    private void validateId(long id) {
+        if (id <= 0) {
+            throw new IllegalArgumentException("The stadium ID must be positive.");
+        }
+    }
+
     private City findCity(
             List<City> cities,
             long cityId
@@ -89,87 +156,5 @@ public class StadiumRepository {
                                         + cityId
                         )
                 );
-    }
-    public void insert(Stadium stadium) throws SQLException {
-        if (stadium == null) {
-            throw new IllegalArgumentException("El estadio es obligatorio.");
-        }
-
-        validate(stadium.getId(), stadium.getName(), stadium.getCity());
-
-        String sql = """
-            INSERT INTO estadio (id, nombre, ciudad)
-            VALUES (?, ?, ?)
-            """;
-
-        try (Connection connection = DatabaseConnection.connect();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-
-            statement.setLong(1, stadium.getId());
-            statement.setString(2, stadium.getName().trim());
-            statement.setLong(3, stadium.getCity().getId());
-
-            statement.executeUpdate();
-        }
-    }
-
-    public boolean update(long id, String name, City city)
-            throws SQLException {
-
-        validate(id, name, city);
-
-        String sql = """
-            UPDATE estadio
-            SET nombre = ?, ciudad = ?
-            WHERE id = ?
-            """;
-
-        try (Connection connection = DatabaseConnection.connect();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-
-            statement.setString(1, name.trim());
-            statement.setLong(2, city.getId());
-            statement.setLong(3, id);
-
-            return statement.executeUpdate() == 1;
-        }
-    }
-
-    public boolean deleteById(long id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException(
-                    "El ID del estadio debe ser positivo."
-            );
-        }
-
-        String sql = "DELETE FROM estadio WHERE id = ?";
-
-        try (Connection connection = DatabaseConnection.connect();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-
-            statement.setLong(1, id);
-
-            return statement.executeUpdate() == 1;
-        }
-    }
-
-    private void validate(long id, String name, City city) {
-        if (id <= 0) {
-            throw new IllegalArgumentException(
-                    "El ID del estadio debe ser positivo."
-            );
-        }
-
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException(
-                    "El nombre del estadio es obligatorio."
-            );
-        }
-
-        if (city == null || city.getId() <= 0) {
-            throw new IllegalArgumentException(
-                    "Seleccioná una ciudad existente."
-            );
-        }
     }
 }

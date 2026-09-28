@@ -21,6 +21,15 @@ public class PenaltyShootout extends Incident implements Serializable {
     public boolean isScored() { return scored; }
 
     @Override
+    public boolean isShootoutPenalty() { return true; }
+
+    @Override
+    public Player getPenaltyTaker() { return player; }
+
+    @Override
+    public boolean isPenaltyScored() { return scored; }
+
+    @Override
     public String getDescription() {
         return "SHOOTOUT PENALTY - " + player.getName() + " " + player.getLastName()
                 + (scored ? " scored" : " missed");

@@ -17,7 +17,10 @@ public class Substitution extends Incident implements Serializable {
         this.playerOut = playerOut;
     }
 
+    @Override
     public Player getPlayerIn() { return playerIn; }
+
+    @Override
     public Player getPlayerOut() { return playerOut; }
 
     @Override

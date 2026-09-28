@@ -1,37 +1,62 @@
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\City.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Coach.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\FinalMatch.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\FirstLegMatch.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\GroupMatch.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Match.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Person.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Player.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Referee.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\SecondLegMatch.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Stadium.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\Team.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\domain\TournamentZone.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\CoachDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\PersonaDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\PersonDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\PlayerDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\PlayersDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\RefereeDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\RefereesDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\SquadDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\TeamDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\TeamsDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\TournamentDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\dto\TournamentRootDto.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\enums\Position.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\incidents\Goal.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\incidents\Incident.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\incidents\PenaltyShootout.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\incidents\RedCard.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\incidents\Substitution.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\incidents\YellowCard.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\loader\TournamentData.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\loader\TournamentLoader.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\Run\Championship.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\Core\Run\Main.java
-C:\Users\Gendest\OneDrive\Documentos\TP Progra B\TP_PrograB\src\main\java\GUI\View.java
+C:\Java\TP_PrograB\src\main\java\Controller\MainMenuController.java
+C:\Java\TP_PrograB\src\main\java\Controller\NewTournamentController.java
+C:\Java\TP_PrograB\src\main\java\Controller\StadiumController.java
+C:\Java\TP_PrograB\src\main\java\Controller\TournamentController.java
+C:\Java\TP_PrograB\src\main\java\Controller\VenuesController.java
+C:\Java\TP_PrograB\src\main\java\Core\classification\StandingsCalculator.java
+C:\Java\TP_PrograB\src\main\java\Core\console\MatchConsoleReporter.java
+C:\Java\TP_PrograB\src\main\java\Core\console\StandingsConsoleReporter.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\City.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Coach.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Country.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\FinalMatch.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\FirstLegMatch.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\GroupMatch.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Lineup.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Match.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Person.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Player.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Referee.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\SecondLegMatch.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Stadium.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\Team.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\TeamStanding.java
+C:\Java\TP_PrograB\src\main\java\Core\domain\TournamentZone.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\CoachDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\CountryDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\PersonDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\PlayerDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\PlayersDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\RefereeDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\RefereesDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\SquadDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\TeamDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\TeamsDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\TournamentDto.java
+C:\Java\TP_PrograB\src\main\java\Core\dto\TournamentRootDto.java
+C:\Java\TP_PrograB\src\main\java\Core\enums\FormationType.java
+C:\Java\TP_PrograB\src\main\java\Core\enums\Position.java
+C:\Java\TP_PrograB\src\main\java\Core\enums\TournamentStage.java
+C:\Java\TP_PrograB\src\main\java\Core\incidents\Goal.java
+C:\Java\TP_PrograB\src\main\java\Core\incidents\Incident.java
+C:\Java\TP_PrograB\src\main\java\Core\incidents\PenaltyShootout.java
+C:\Java\TP_PrograB\src\main\java\Core\incidents\RedCard.java
+C:\Java\TP_PrograB\src\main\java\Core\incidents\Substitution.java
+C:\Java\TP_PrograB\src\main\java\Core\incidents\YellowCard.java
+C:\Java\TP_PrograB\src\main\java\Core\loader\TournamentData.java
+C:\Java\TP_PrograB\src\main\java\Core\loader\TournamentLoader.java
+C:\Java\TP_PrograB\src\main\java\Core\loader\TournamentValidator.java
+C:\Java\TP_PrograB\src\main\java\Core\persistance\ChampionshipRepository.java
+C:\Java\TP_PrograB\src\main\java\Core\report\TournamentReportService.java
+C:\Java\TP_PrograB\src\main\java\Core\Run\Championship.java
+C:\Java\TP_PrograB\src\main\java\Core\Run\Main.java
+C:\Java\TP_PrograB\src\main\java\Core\simulation\MatchSimulator.java
+C:\Java\TP_PrograB\src\main\java\GUI\AppLauncher.java
+C:\Java\TP_PrograB\src\main\java\GUI\View.java
+C:\Java\TP_PrograB\src\main\java\Infrastructure\database\CityRepository.java
+C:\Java\TP_PrograB\src\main\java\Infrastructure\database\CityRepositoryTest.java
+C:\Java\TP_PrograB\src\main\java\Infrastructure\database\DatabaseConnection.java
+C:\Java\TP_PrograB\src\main\java\Infrastructure\database\DatabaseTest.java
+C:\Java\TP_PrograB\src\main\java\Infrastructure\database\StadiumRepository.java
+C:\Java\TP_PrograB\src\main\java\Infrastructure\database\StadiumRepositoryTest.java
+C:\Java\TP_PrograB\src\main\java\Utils\Paths.java

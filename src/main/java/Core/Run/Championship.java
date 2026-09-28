@@ -3,6 +3,7 @@ package Core.Run;
 import Core.classification.StandingsCalculator;
 import Core.console.MatchConsoleReporter;
 import Core.domain.*;
+import Core.incidents.Incident;
 import Core.incidents.PenaltyShootout;
 import Core.loader.TournamentData;
 import Core.loader.TournamentLoader;
@@ -14,8 +15,8 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-import Core.console.MatchConsoleReporter;
 import Core.console.StandingsConsoleReporter;
 
 import Core.enums.TournamentStage;
@@ -40,7 +41,6 @@ public class Championship implements Serializable {
     private List<Team> quarterFinalWinners;
     private List<Team> finalists;
     private Team champion;
-    private Match pendingKnockoutMatch;
     public Championship(String jsonPath) throws IOException {
         this(jsonPath, new Random());
     }
@@ -201,7 +201,6 @@ public class Championship implements Serializable {
 
     public List<TeamStanding> getStandings(TournamentZone zone) {
         StandingsCalculator calculator = new StandingsCalculator();
-
         return calculator.calculate(zone, matches);
     }
 
@@ -234,6 +233,10 @@ public class Championship implements Serializable {
         this.stadiums.addAll(stadiums);
     }
 
+    private void addKnockoutFixtures(List<? extends Match> fixtures) {
+        matches.addAll(fixtures);
+    }
+
     public List<TournamentZone> getTournamentZones() { return Collections.unmodifiableList(tournamentZones); }
     public List<Match> getMatches() { return Collections.unmodifiableList(matches); }
 
@@ -252,9 +255,8 @@ public class Championship implements Serializable {
         this.matchSimulator = new MatchSimulator(this.random);
         restoreMissingMatchdays();
         TournamentStage observedStage = inferStageFromPlayedMatches();
-        if (pendingKnockoutMatch == null
-                && (stage == null
-                || observedStage.ordinal() > stage.ordinal())) {
+        if (stage == null
+                || observedStage.ordinal() > stage.ordinal()) {
 
             stage = observedStage;
         }
@@ -577,19 +579,20 @@ public class Championship implements Serializable {
     }
 
     private boolean hasRecordedShootout(Match match) {
-        return match.getIncidents().stream().anyMatch(PenaltyShootout.class::isInstance);
+        return match.getIncidents().stream().anyMatch(Incident::isShootoutPenalty);
     }
 
     private Team recordedPenaltyWinner(Match match) {
         int home = 0;
         int away = 0;
-        for (var incident : match.getIncidents()) {
-            if (!(incident instanceof PenaltyShootout penalty) || !penalty.isScored()) {
+        for (Incident incident : match.getIncidents()) {
+            if (!incident.isShootoutPenalty() || !incident.isPenaltyScored()) {
                 continue;
             }
-            if (match.getHomeTeam().getPlayers().contains(penalty.getPlayer())) {
+            Player penaltyTaker = incident.getPenaltyTaker();
+            if (match.getHomeTeam().getPlayers().contains(penaltyTaker)) {
                 home++;
-            } else if (match.getAwayTeam().getPlayers().contains(penalty.getPlayer())) {
+            } else if (match.getAwayTeam().getPlayers().contains(penaltyTaker)) {
                 away++;
             }
         }
@@ -729,7 +732,8 @@ public class Championship implements Serializable {
 
         // Evita volver a crear los cruces al cargar el torneo.
         boolean alreadyScheduled = matches.stream()
-                .anyMatch(match -> match instanceof FirstLegMatch);
+                .map(Match::asFirstLeg)
+                .anyMatch(Objects::nonNull);
         if (alreadyScheduled) {
             return;
         }
@@ -756,16 +760,11 @@ public class Championship implements Serializable {
             ));
         }
 
-        matches.addAll(fixtures);
+        addKnockoutFixtures(fixtures);
     }
 
     /** Plays exactly one pending knockout match and prepares the next round when needed. */
     public Match simulateNextKnockoutMatch() {
-        // Primero termina una baja pendiente, sin repetir el partido.
-        if (pendingKnockoutMatch != null) {
-            return completePendingKnockoutMatch();
-        }
-
         if (stage == TournamentStage.GROUP_STAGE
                 || hasPendingGroupMatchdays()) {
 
@@ -800,23 +799,37 @@ public class Championship implements Serializable {
         // Consulta los disponibles en PostgreSQL antes de cada partido.
         reloadVenuesFromDatabase();
 
-        if (stadiums.isEmpty()) {
+        List<Stadium> availableStadiums = getUnusedStadiums();
+
+        if (availableStadiums.isEmpty()) {
             throw new IllegalStateException(
-                    "No quedan estadios disponibles. "
-                            + "Agregá uno antes de continuar."
+                    "No quedan estadios sin utilizar. "
+                            + "Agregá otro estadio antes de continuar."
             );
         }
 
         Stadium selectedStadium =
-                stadiums.get(random.nextInt(stadiums.size()));
+                availableStadiums.get(random.nextInt(availableStadiums.size()));
 
         next.setStadium(selectedStadium);
 
         matchSimulator.simulate(next);
+        advanceKnockoutStageIfNeeded();
+        return next;
+    }
 
-        pendingKnockoutMatch = next;
+    List<Stadium> getUnusedStadiums() {
+        Set<Long> usedStadiumIds = matches.stream()
+                .filter(match -> !match.isGroupStage())
+                .filter(Match::isPlayed)
+                .map(Match::getStadium)
+                .filter(Objects::nonNull)
+                .map(Stadium::getId)
+                .collect(Collectors.toSet());
 
-        return completePendingKnockoutMatch();
+        return stadiums.stream()
+                .filter(stadium -> !usedStadiumIds.contains(stadium.getId()))
+                .toList();
     }
 
     private LocalDate lastGroupDate() {
@@ -829,15 +842,15 @@ public class Championship implements Serializable {
 
     private List<FirstLegMatch> firstLegs() {
         return matches.stream()
-                .filter(FirstLegMatch.class::isInstance)
-                .map(FirstLegMatch.class::cast)
+                .map(Match::asFirstLeg)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
     private List<SecondLegMatch> secondLegs() {
         return matches.stream()
-                .filter(SecondLegMatch.class::isInstance)
-                .map(SecondLegMatch.class::cast)
+                .map(Match::asSecondLeg)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -879,8 +892,8 @@ public class Championship implements Serializable {
         }
 
         FinalMatch finalMatch = matches.stream()
-                .filter(FinalMatch.class::isInstance)
-                .map(FinalMatch.class::cast)
+                .map(Match::asFinal)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElseThrow();
         if (finalMatch.isPlayed()) {
@@ -898,7 +911,7 @@ public class Championship implements Serializable {
                     chooseEligibleReferee(home, away),
                     first.getHomeGoals(), first.getAwayGoals()));
         }
-        matches.addAll(fixtures);
+        addKnockoutFixtures(fixtures);
     }
 
     private void scheduleSemiFinals(LocalDate date) {
@@ -914,16 +927,20 @@ public class Championship implements Serializable {
             fixtures.add(new FirstLegMatch(date, pairing[0], pairing[1],
                     chooseEligibleReferee(pairing[0], pairing[1])));
         }
-        matches.addAll(fixtures);
+        addKnockoutFixtures(fixtures);
     }
 
     private void scheduleFinal(LocalDate date) {
-        if (finalists.size() != 2 || matches.stream().anyMatch(FinalMatch.class::isInstance)) {
+        if (finalists.size() != 2 || matches.stream()
+                .map(Match::asFinal)
+                .anyMatch(Objects::nonNull)) {
             throw new IllegalStateException("Two finalists and one unscheduled final are required.");
         }
         Team home = finalists.get(0);
         Team away = finalists.get(1);
-        matches.add(new FinalMatch(date, home, away, chooseEligibleReferee(home, away)));
+        addKnockoutFixtures(List.of(
+                new FinalMatch(date, home, away, chooseEligibleReferee(home, away))
+        ));
     }
 
     public List<Team> simulateSemiFinals(
@@ -1002,38 +1019,6 @@ public class Championship implements Serializable {
                     e
             );
         }
-    }
-
-    private Match completePendingKnockoutMatch() {
-        Match played = pendingKnockoutMatch;
-        Stadium stadium = played.getStadium();
-
-        try {
-            StadiumRepository repository = new StadiumRepository();
-
-            // Si ya no existe, la baja ya está cumplida.
-            repository.deleteById(stadium.getId());
-
-        } catch (SQLException e) {
-            throw new IllegalStateException(
-                    "El partido ya se jugó, pero no se pudo eliminar "
-                            + "el estadio de PostgreSQL. "
-                            + "Volvé a presionar Simular para reintentar "
-                            + "la baja sin repetir el partido.",
-                    e
-            );
-        }
-
-        // También deja de estar disponible dentro del campeonato.
-        stadiums.removeIf(
-                available -> available.getId() == stadium.getId()
-        );
-
-        advanceKnockoutStageIfNeeded();
-
-        pendingKnockoutMatch = null;
-
-        return played;
     }
 
     public static void main(String[] args) throws IOException {
@@ -1140,8 +1125,8 @@ public class Championship implements Serializable {
             System.out.println(championship.getChampion().getName());
         } else {
             FinalMatch savedFinal = championship.getMatches().stream()
-                    .filter(FinalMatch.class::isInstance)
-                    .map(FinalMatch.class::cast)
+                    .map(Match::asFinal)
+                    .filter(Objects::nonNull)
                     .findFirst()
                     .orElse(null);
             if (savedFinal != null) {

@@ -1,8 +1,6 @@
 package Core.domain;
 
 import Core.incidents.Incident;
-import Core.incidents.RedCard;
-import Core.incidents.Substitution;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -19,13 +17,13 @@ public abstract class Match implements Serializable {
     private Team homeTeam;
     private Team awayTeam;
     private Referee referee;
+    private Stadium stadium;
     private int homeGoals;
     private int awayGoals;
     private List<Incident> incidents;
     private Lineup homeLineup;
     private Lineup awayLineup;
     private boolean played;
-    private Stadium stadium;
 
     public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
         this.matchDate = matchDate;
@@ -78,28 +76,21 @@ public abstract class Match implements Serializable {
                 break;
             }
 
-            if (incident instanceof Substitution substitution) {
-                if (team.getPlayers().contains(
-                        substitution.getPlayerIn()
-                )) {
-                    playersOnField.remove(
-                            substitution.getPlayerOut()
-                    );
-                    if (!playersOnField.contains(substitution.getPlayerIn())) {
-                        playersOnField.add(
-                                substitution.getPlayerIn()
-                        );
+            Player playerIn = incident.getPlayerIn();
+            Player playerOut = incident.getPlayerOut();
+            if (playerIn != null && playerOut != null) {
+                if (team.getPlayers().contains(playerIn)) {
+                    playersOnField.remove(playerOut);
+                    if (!playersOnField.contains(playerIn)) {
+                        playersOnField.add(playerIn);
                     }
                 }
             }
 
-            if (incident instanceof RedCard redCard) {
-                if (team.getPlayers().contains(
-                        redCard.getPenalizedPlayer()
-                )) {
-                    playersOnField.remove(
-                            redCard.getPenalizedPlayer()
-                    );
+            if (incident.isRedCard()) {
+                Player affectedPlayer = incident.getAffectedPlayer();
+                if (team.getPlayers().contains(affectedPlayer)) {
+                    playersOnField.remove(affectedPlayer);
                 }
             }
         }
@@ -145,6 +136,10 @@ public abstract class Match implements Serializable {
     public void setPlayed(boolean played) { this.played = played; }
 
     public boolean isGroupStage() { return false; }
+    public FirstLegMatch asFirstLeg() { return null; }
+    public SecondLegMatch asSecondLeg() { return null; }
+    public FinalMatch asFinal() { return null; }
+    public boolean isSettledByPenalties() { return false; }
     public int getMatchday() { return 0; }
     public void setMatchday(int matchday) {
         throw new UnsupportedOperationException("This match does not belong to the group stage.");

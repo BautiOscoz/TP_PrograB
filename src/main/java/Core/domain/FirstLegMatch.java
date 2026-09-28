@@ -9,4 +9,7 @@ public class FirstLegMatch extends Match implements Serializable {
     public FirstLegMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
         super(matchDate, homeTeam, awayTeam, referee);
     }
+
+    @Override
+    public FirstLegMatch asFirstLeg() { return this; }
 }
