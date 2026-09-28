@@ -814,8 +814,32 @@ public class Championship implements Serializable {
         next.setStadium(selectedStadium);
 
         matchSimulator.simulate(next);
+        resolvePlayedSeries(next);
         advanceKnockoutStageIfNeeded();
         return next;
+    }
+
+    /**
+     * Resuelve inmediatamente una serie cuando el partido recién jugado es una vuelta.
+     * Así, si el global termina empatado, los penales quedan registrados antes de que
+     * el controlador reciba el partido y lo muestre en la interfaz.
+     */
+    private void resolvePlayedSeries(Match playedMatch) {
+        SecondLegMatch secondLeg = playedMatch.asSecondLeg();
+        if (secondLeg == null) {
+            return;
+        }
+
+        FirstLegMatch firstLeg = firstLegs().stream()
+                .filter(first -> first.getHomeTeam() == secondLeg.getAwayTeam()
+                        && first.getAwayTeam() == secondLeg.getHomeTeam())
+                .filter(Match::isPlayed)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No se encontró el partido de ida de esta serie."
+                ));
+
+        determineSeriesWinner(firstLeg, secondLeg);
     }
 
     List<Stadium> getUnusedStadiums() {
