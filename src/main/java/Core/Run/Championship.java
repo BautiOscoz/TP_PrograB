@@ -41,6 +41,7 @@ public class Championship implements Serializable {
     private List<Team> quarterFinalWinners;
     private List<Team> finalists;
     private Team champion;
+    private Match pendingPenaltyShootout;
     public Championship(String jsonPath) throws IOException {
         this(jsonPath, new Random());
     }
@@ -255,8 +256,9 @@ public class Championship implements Serializable {
         this.matchSimulator = new MatchSimulator(this.random);
         restoreMissingMatchdays();
         TournamentStage observedStage = inferStageFromPlayedMatches();
-        if (stage == null
-                || observedStage.ordinal() > stage.ordinal()) {
+        if (pendingPenaltyShootout == null
+                && (stage == null
+                || observedStage.ordinal() > stage.ordinal())) {
 
             stage = observedStage;
         }
@@ -779,6 +781,12 @@ public class Championship implements Serializable {
             );
         }
 
+        // La tanda constituye el segundo paso de la simulación eliminatoria.
+        // Se procesa antes de buscar otro partido o consultar nuevos estadios.
+        if (pendingPenaltyShootout != null) {
+            return simulatePendingPenaltyShootout();
+        }
+
         if (stage == TournamentStage.QUARTER_FINALS
                 && firstLegs().isEmpty()) {
 
@@ -814,23 +822,16 @@ public class Championship implements Serializable {
         next.setStadium(selectedStadium);
 
         matchSimulator.simulate(next);
-        resolvePlayedSeries(next);
-        advanceKnockoutStageIfNeeded();
+        if (requiresPenaltyShootout(next)) {
+            pendingPenaltyShootout = next;
+        } else {
+            advanceKnockoutStageIfNeeded();
+        }
         return next;
     }
 
-    /**
-     * Resuelve inmediatamente una serie cuando el partido recién jugado es una vuelta.
-     * Así, si el global termina empatado, los penales quedan registrados antes de que
-     * el controlador reciba el partido y lo muestre en la interfaz.
-     */
-    private void resolvePlayedSeries(Match playedMatch) {
-        SecondLegMatch secondLeg = playedMatch.asSecondLeg();
-        if (secondLeg == null) {
-            return;
-        }
-
-        FirstLegMatch firstLeg = firstLegs().stream()
+    private FirstLegMatch findFirstLeg(SecondLegMatch secondLeg) {
+        return firstLegs().stream()
                 .filter(first -> first.getHomeTeam() == secondLeg.getAwayTeam()
                         && first.getAwayTeam() == secondLeg.getHomeTeam())
                 .filter(Match::isPlayed)
@@ -838,8 +839,84 @@ public class Championship implements Serializable {
                 .orElseThrow(() -> new IllegalStateException(
                         "No se encontró el partido de ida de esta serie."
                 ));
+    }
 
-        determineSeriesWinner(firstLeg, secondLeg);
+    private boolean requiresPenaltyShootout(Match playedMatch) {
+        SecondLegMatch secondLeg = playedMatch.asSecondLeg();
+        if (secondLeg != null) {
+            FirstLegMatch firstLeg = findFirstLeg(secondLeg);
+            Team teamA = firstLeg.getHomeTeam();
+            Team teamB = firstLeg.getAwayTeam();
+            return getSeriesPoints(firstLeg, secondLeg, teamA)
+                    == getSeriesPoints(firstLeg, secondLeg, teamB)
+                    && getWeightedGoalDifference(firstLeg, secondLeg, teamA)
+                    == getWeightedGoalDifference(firstLeg, secondLeg, teamB);
+        }
+
+        FinalMatch finalMatch = playedMatch.asFinal();
+        return finalMatch != null
+                && finalMatch.getHomeGoals() == finalMatch.getAwayGoals();
+    }
+
+    private Match simulatePendingPenaltyShootout() {
+        Match match = pendingPenaltyShootout;
+
+        SecondLegMatch secondLeg = match.asSecondLeg();
+        if (secondLeg != null) {
+            secondLeg.setSettledByPenalties(true);
+            determinePenaltyShootoutWinner(secondLeg);
+        } else {
+            FinalMatch finalMatch = match.asFinal();
+            if (finalMatch == null) {
+                throw new IllegalStateException(
+                        "El partido pendiente no admite una definición por penales."
+                );
+            }
+            finalMatch.setSettledByPenalties(true);
+            determinePenaltyShootoutWinner(finalMatch);
+        }
+
+        pendingPenaltyShootout = null;
+        advanceKnockoutStageIfNeeded();
+        return match;
+    }
+
+    public boolean hasPendingPenaltyShootout() {
+        return pendingPenaltyShootout != null;
+    }
+
+    public boolean isPendingPenaltyShootout(Match match) {
+        return pendingPenaltyShootout == match;
+    }
+
+    public Match getPendingPenaltyShootout() {
+        return pendingPenaltyShootout;
+    }
+
+    public String getKnockoutDecisionCriterion(Match match) {
+        if (isPendingPenaltyShootout(match)) {
+            return "Empate: definición por penales pendiente";
+        }
+        if (match.isSettledByPenalties()) {
+            return "Ganador definido por penales";
+        }
+
+        SecondLegMatch secondLeg = match.asSecondLeg();
+        if (secondLeg != null) {
+            FirstLegMatch firstLeg = findFirstLeg(secondLeg);
+            Team teamA = firstLeg.getHomeTeam();
+            Team teamB = firstLeg.getAwayTeam();
+            if (getSeriesPoints(firstLeg, secondLeg, teamA)
+                    != getSeriesPoints(firstLeg, secondLeg, teamB)) {
+                return "Ganador definido por puntos en la serie";
+            }
+            return "Ganador definido por diferencia de gol con gol visitante doble";
+        }
+
+        if (match.asFinal() != null) {
+            return "Ganador definido por el resultado de los 90 minutos";
+        }
+        return "Partido de ida: la serie continúa";
     }
 
     List<Stadium> getUnusedStadiums() {
@@ -879,6 +956,9 @@ public class Championship implements Serializable {
     }
 
     private void advanceKnockoutStageIfNeeded() {
+        if (pendingPenaltyShootout != null) {
+            return;
+        }
         if (stage == TournamentStage.QUARTER_FINALS) {
             List<FirstLegMatch> first = firstLegs();
             List<SecondLegMatch> second = secondLegs();
@@ -989,6 +1069,9 @@ public class Championship implements Serializable {
             throw new IllegalStateException("Decided semi-finals are required first.");
         }
         simulateNextKnockoutMatch();
+        if (hasPendingPenaltyShootout()) {
+            simulateNextKnockoutMatch();
+        }
         return champion;
     }
 

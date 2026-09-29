@@ -122,6 +122,11 @@ public class TournamentController {
         simulateKnockoutBtn.setDisable(
                 championship.getStage() == TournamentStage.GROUP_STAGE
                         || championship.getStage() == TournamentStage.FINISHED);
+        simulateKnockoutBtn.setText(
+                championship.hasPendingPenaltyShootout()
+                        ? "Simulate Penalties"
+                        : "Simulate Next Match"
+        );
     }
 
     private void showLatestMatchdayResults() {
@@ -195,17 +200,29 @@ public class TournamentController {
             return;
         }
         try {
+            boolean wasPenaltyShootoutPending = championship.hasPendingPenaltyShootout();
             Match played = championship.simulateNextKnockoutMatch();
             repository.save(championship);
-            phaseLabel.setText(
-                    played.getHomeTeam().getName()
-                            + " " + played.getHomeGoals()
-                            + " - " + played.getAwayGoals()
-                            + " " + played.getAwayTeam().getName()
-                            + " | Estadio: " + played.getStadium().getName()
-                            + " | Ciudad: "
-                            + played.getStadium().getCity().getName()
-            );
+            if (wasPenaltyShootoutPending) {
+                int[] penalties = getPenaltyScore(played);
+                phaseLabel.setText(
+                        "Penalties: " + played.getHomeTeam().getName()
+                                + " " + penalties[0] + " - " + penalties[1]
+                                + " " + played.getAwayTeam().getName()
+                                + " | " + championship.getKnockoutDecisionCriterion(played)
+                );
+            } else {
+                phaseLabel.setText(
+                        played.getHomeTeam().getName()
+                                + " " + played.getHomeGoals()
+                                + " - " + played.getAwayGoals()
+                                + " " + played.getAwayTeam().getName()
+                                + " | Estadio: " + played.getStadium().getName()
+                                + " | Ciudad: "
+                                + played.getStadium().getCity().getName()
+                                + " | " + championship.getKnockoutDecisionCriterion(played)
+                );
+            }
             zoneTitleLabel.setVisible(false);
             showKnockoutBracket(true);
             buildKnockoutBracket();
@@ -492,10 +509,13 @@ public class TournamentController {
                 .filter(Objects::nonNull)
                 .findFirst()
                 .ifPresent(finalMatch -> {
-                    if (finalMatch.isPlayed()) {
+                    if (finalMatch.isPlayed()
+                            && !championship.isPendingPenaltyShootout(finalMatch)) {
                         Team winner = championship.getRecordedFinalWinner(finalMatch);
                         finalColumn.getChildren().add(createMatchCard(List.of(finalMatch), winner));
                         winnerBanner.setText("GANADOR: " + winner.getName());
+                    } else if (championship.isPendingPenaltyShootout(finalMatch)) {
+                        finalColumn.getChildren().add(createPendingPenaltyCard(finalMatch));
                     } else {
                         finalColumn.getChildren().add(createPendingMatchCard(finalMatch));
                     }
@@ -515,7 +535,8 @@ public class TournamentController {
         for (int index = startIndex; index < startIndex + count && index < firstLegs.size(); index++) {
             FirstLegMatch first = firstLegs.get(index);
             SecondLegMatch second = index < secondLegs.size() ? secondLegs.get(index) : null;
-            if (second != null && first.isPlayed() && second.isPlayed()) {
+            if (second != null && first.isPlayed() && second.isPlayed()
+                    && !championship.isPendingPenaltyShootout(second)) {
                 Team winner = championship.getRecordedSeriesWinner(first, second);
                 column.getChildren().add(createMatchCard(List.of(first, second), winner));
             } else {
@@ -551,11 +572,29 @@ public class TournamentController {
         }
         if (second == null || !second.isPlayed()) {
             card.getChildren().add(new Label("Vuelta pendiente"));
+        } else if (championship.isPendingPenaltyShootout(second)) {
+            card.getChildren().add(new Label("Penales pendientes"));
         }
         if (first.isPlayed()) {
             card.getChildren().add(new Label("Click para ver incidencias"));
-            card.setOnMouseClicked(event -> showMatchDetails(List.of(first)));
+            card.setOnMouseClicked(event -> showMatchDetails(
+                    second != null && second.isPlayed()
+                            ? List.of(first, second)
+                            : List.of(first)
+            ));
         }
+        return card;
+    }
+
+    private VBox createPendingPenaltyCard(Match match) {
+        VBox card = new VBox(3);
+        card.getStyleClass().add("match-card");
+        card.getChildren().add(new Label(match.getHomeTeam().getName()
+                + " " + match.getHomeGoals() + " - " + match.getAwayGoals()
+                + " " + match.getAwayTeam().getName()));
+        card.getChildren().add(new Label("Penales pendientes"));
+        card.getChildren().add(new Label("Click para ver incidencias"));
+        card.setOnMouseClicked(event -> showMatchDetails(List.of(match)));
         return card;
     }
 
