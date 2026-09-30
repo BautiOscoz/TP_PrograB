@@ -28,6 +28,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.WindowEvent;
 
+import Core.report.IdentificationPdfService;
+import javafx.concurrent.Task;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
+import java.io.File;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -365,10 +371,107 @@ public class TournamentController {
 
     @FXML
     private void handleGetIdentifications() {
-        showInformation(
-                "Get Identifications",
-                "This option is ready to be connected to the identification report."
+
+        if (championship == null) {
+            showError("Primero cargá un torneo.");
+            return;
+        }
+
+        // Seleccionar carpeta de fotografías.
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+
+        directoryChooser.setTitle(
+                "Elegí la carpeta de fotografías"
         );
+
+        File photos = directoryChooser.showDialog(
+                tournamentPane.getScene().getWindow()
+        );
+
+        if (photos == null) {
+            return;
+        }
+
+        // Seleccionar dónde guardar el PDF.
+        FileChooser chooser = new FileChooser();
+
+        chooser.setTitle("Guardar identificaciones");
+        chooser.setInitialFileName("identificaciones.pdf");
+
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF", "*.pdf")
+        );
+
+        File selected = chooser.showSaveDialog(
+                tournamentPane.getScene().getWindow()
+        );
+
+        if (selected == null) {
+            return;
+        }
+
+        if (!selected.getName()
+                .toLowerCase(java.util.Locale.ROOT)
+                .endsWith(".pdf")) {
+
+            showError("El nombre del archivo debe terminar en .pdf.");
+            return;
+        }
+
+        var teams = List.copyOf(championship.getTeams());
+        var referees = List.copyOf(championship.getReferees());
+        String title = tournamentName;
+
+        // Generar en segundo plano para no bloquear JavaFX.
+        Task<IdentificationPdfService.Result> task = new Task<>() {
+
+            @Override
+            protected IdentificationPdfService.Result call()
+                    throws Exception {
+
+                return new IdentificationPdfService().generate(
+                        teams,
+                        referees,
+                        title,
+                        photos.toPath(),
+                        selected.toPath()
+                );
+            }
+        };
+
+        getIDBtn.setDisable(true);
+
+        task.setOnSucceeded(event -> {
+
+            getIDBtn.setDisable(false);
+
+            var result = task.getValue();
+
+            String message =
+                    "PDF generado: " + selected.getAbsolutePath()
+                            + "\nIdentificaciones: " + result.total()
+                            + "\nSin fotografía: "
+                            + result.missingPhotos().size();
+
+            reportArea.setText(
+                    message + "\n\n"
+                            + String.join("\n", result.missingPhotos())
+            );
+
+            showInformation("Identificaciones", message);
+        });
+
+        task.setOnFailed(event -> {
+
+            getIDBtn.setDisable(false);
+
+            showError(
+                    "No se pudo generar el PDF: "
+                            + task.getException().getMessage()
+            );
+        });
+
+        new Thread(task, "identificaciones-pdf").start();
     }
 
     @FXML
