@@ -12,6 +12,9 @@ import Core.domain.TeamStanding;
 import Core.domain.TournamentZone;
 import Core.persistance.ChampionshipRepository;
 import Core.report.TournamentReportService;
+import Core.report.MatchDetailsFormatter;
+import javafx.scene.control.ComboBox;
+import javafx.util.StringConverter;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
@@ -378,6 +381,9 @@ public class TournamentController {
         }
 
         // Seleccionar carpeta de fotografías.
+        showInformation("Participant photographs",
+                "Name each photograph with the person's document number, for example 12345678.jpg. "
+                        + "JPG, JPEG and PNG are supported. Missing photos will be reported in the result.");
         DirectoryChooser directoryChooser = new DirectoryChooser();
 
         directoryChooser.setTitle(
@@ -446,6 +452,8 @@ public class TournamentController {
             getIDBtn.setDisable(false);
 
             var result = task.getValue();
+
+            showReport();
 
             String message =
                     "PDF generado: " + selected.getAbsolutePath()
@@ -749,44 +757,51 @@ public class TournamentController {
     }
 
     private void showMatchDetails(List<Match> matches) {
-        StringBuilder details = new StringBuilder();
-        for (Match match : matches) {
-            details.append(match.getHomeTeam().getName())
-                    .append(" ").append(match.getHomeGoals())
-                    .append(" - ").append(match.getAwayGoals())
-                    .append(" ").append(match.getAwayTeam().getName())
-                    .append("\nFecha: ").append(match.getMatchDate())
-                    .append("\nEstadio: ")
-                    .append(match.getStadium() == null
-                            ? "No asignado"
-                            : match.getStadium().getName()
-                            + " - " + match.getStadium().getCity().getName())
-                    .append("\nFormaciones: ")
-                    .append(match.getHomeLineup().getFormation())
-                    .append(" / ")
-                    .append(match.getAwayLineup().getFormation())
-                    .append("\nIncidencias:\n");
-            if (match.getIncidents().isEmpty()) {
-                details.append("Sin incidencias\n");
-            } else {
-                match.getIncidents().stream()
-                        .sorted(Comparator.comparingInt(Incident::getMinute))
-                        .forEach(incident -> details
-                                .append(incident.getMinute()).append("' ")
-                                .append(incident.getDescription()).append("\n"));
-            }
-            details.append("\n");
+        if (matches.isEmpty()) {
+            showInformation("Match details", "Play a match to view its details.");
+            return;
         }
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Match incidents");
-        alert.setHeaderText("Played match details");
-        TextArea timeline = new TextArea(details.toString());
+        MatchDetailsFormatter formatter = new MatchDetailsFormatter();
+        ComboBox<Match> selector = new ComboBox<>();
+        selector.getItems().setAll(matches);
+        selector.setMaxWidth(Double.MAX_VALUE);
+        selector.setConverter(new StringConverter<>() {
+            @Override public String toString(Match match) {
+                return match == null ? "" : formatter.title(match);
+            }
+            @Override public Match fromString(String value) {
+                throw new UnsupportedOperationException("Select a recorded match.");
+            }
+        });
+        TextArea timeline = new TextArea();
         timeline.setEditable(false);
         timeline.setWrapText(true);
-        timeline.setPrefSize(550, 340);
-        alert.getDialogPane().setContent(timeline);
+        timeline.setPrefSize(720, 480);
+        selector.valueProperty().addListener((observable, previous, selected) -> {
+            if (selected != null) {
+                timeline.setText(formatter.format(championship, selected));
+                timeline.positionCaret(0);
+            }
+        });
+        selector.getSelectionModel().selectLast();
+        VBox content = new VBox(10, new Label("Select a played match"), selector, timeline);
+        VBox.setVgrow(timeline, javafx.scene.layout.Priority.ALWAYS);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Match details and history");
+        alert.setHeaderText("Starting lineups, match incidents and penalty shootouts");
+        alert.setResizable(true);
+        if (tournamentPane.getScene() != null) {
+            alert.initOwner(tournamentPane.getScene().getWindow());
+        }
+        alert.getDialogPane().setContent(content);
         alert.showAndWait();
+    }
+
+    @FXML
+    private void handleMatchHistory() {
+        if (championship == null) return;
+        showMatchDetails(championship.getPlayedMatches().stream()
+                .sorted(Comparator.comparing(Match::getMatchDate)).toList());
     }
 
     private void addTeamScoreRow(VBox card, Team team, int goals, Team winner) {

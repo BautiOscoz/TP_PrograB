@@ -64,6 +64,7 @@
                         <HBox alignment="CENTER_LEFT" spacing="8.0">
                             <children>
                                 <Label fx:id="zoneTitleLabel" styleClass="section-title" text="Zone A" />
+                                <Button text="Match Details / History" onAction="#handleMatchHistory" styleClass="custom-button" />
                             </children>
                         </HBox>
                         <TableView fx:id="standingsTable" maxHeight="132.0" maxWidth="Infinity" minHeight="132.0" prefHeight="132.0" styleClass="standings-table">
