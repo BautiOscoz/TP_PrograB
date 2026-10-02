@@ -11,6 +11,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ComboBox?>
 
 <AnchorPane fx:id="tournamentPane" prefHeight="680.0" prefWidth="1080.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.TournamentController">
     <children>
@@ -64,6 +65,7 @@
                         <HBox alignment="CENTER_LEFT" spacing="8.0">
                             <children>
                                 <Label fx:id="zoneTitleLabel" styleClass="section-title" text="Zone A" />
+                                <Button text="Match Details / History" onAction="#handleMatchHistory" styleClass="custom-button" />
                             </children>
                         </HBox>
                         <TableView fx:id="standingsTable" maxHeight="132.0" maxWidth="Infinity" minHeight="132.0" prefHeight="132.0" styleClass="standings-table">
@@ -111,7 +113,23 @@
                                 <Label fx:id="winnerBanner" alignment="CENTER" maxWidth="Infinity" styleClass="winner-banner" text="GANADOR: -" />
                             </children>
                         </VBox>
-                        <TextArea fx:id="reportArea" styleClass="report-area" VBox.vgrow="ALWAYS" />
+                        <HBox fx:id="playerFilterBar"
+                              alignment="CENTER_LEFT"
+                              spacing="8.0"
+                              visible="false"
+                              managed="false">
+
+                            <children>
+                                <Label text="Position:" />
+
+                                <ComboBox fx:id="playerPositionFilter"
+                                          prefWidth="190.0" />
+                            </children>
+                        </HBox>
+
+                        <TextArea fx:id="reportArea"
+                                  styleClass="report-area"
+                                  VBox.vgrow="ALWAYS" />
                     </children>
                 </VBox>
             </center>

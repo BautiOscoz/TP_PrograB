@@ -7,6 +7,7 @@ import Core.domain.Referee;
 import Core.domain.Team;
 import Core.domain.TeamStanding;
 import Core.incidents.Incident;
+import Core.enums.Position;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -49,21 +50,94 @@ public class TournamentReportService {
                 int minutes = 0;
 
                 for (Match match : championship.getPlayedMatches()) {
-                    int playedMinutes = getPlayedMinutes(match, player);
-                    if (playedMinutes > 0) {
+                    MatchParticipation participation =
+                            getMatchParticipation(match, player);
+
+                    if (participation.played()) {
                         matches++;
-                        minutes += playedMinutes;
+                        minutes += participation.minutes();
                     }
                 }
 
-                rows.add(new ParticipationRow(player, team, matches, minutes));
+                rows.add(new ParticipationRow(
+                        player,
+                        team,
+                        matches,
+                        minutes
+                ));
             }
         }
 
         return rows.stream()
-                .sorted(Comparator.comparingInt(ParticipationRow::getMinutes).reversed()
-                        .thenComparing(row -> row.getPlayer().getLastName()))
+                .sorted(
+                        Comparator.comparingInt(ParticipationRow::getMinutes)
+                                .reversed()
+                                .thenComparing(row ->
+                                        row.getPlayer().getLastName())
+                )
                 .toList();
+    }
+
+    private record MatchParticipation(boolean played, int minutes) {
+    }
+
+    private MatchParticipation getMatchParticipation(
+            Match match,
+            Player player
+    ) {
+        if (!match.isPlayed()
+                || match.getHomeLineup() == null
+                || match.getAwayLineup() == null) {
+
+            return new MatchParticipation(false, 0);
+        }
+
+        // Esta versión del simulador juega partidos de 90 minutos.
+        // La tanda de penales no agrega minutos jugados.
+        final int duration = 90;
+
+        boolean starter =
+                match.getHomeLineup().getPlayers().contains(player)
+                        || match.getAwayLineup().getPlayers().contains(player);
+
+        int entryMinute = starter ? 0 : -1;
+
+        // Match.addIncident() mantiene las incidencias ordenadas por minuto.
+        for (Incident incident : match.getIncidents()) {
+            int minute = incident.getMinute();
+
+            if (incident.isShootoutPenalty()
+                    || minute < 0
+                    || minute > duration) {
+                continue;
+            }
+
+            if (entryMinute == -1
+                    && incident.getPlayerIn() == player) {
+                entryMinute = minute;
+            }
+
+            boolean substitutedOut = incident.getPlayerOut() == player;
+
+            boolean sentOff = incident.isRedCard()
+                    && incident.getAffectedPlayer() == player;
+
+            if (entryMinute >= 0 && (substitutedOut || sentOff)) {
+                return new MatchParticipation(
+                        true,
+                        Math.max(0, minute - entryMinute)
+                );
+            }
+        }
+
+        if (entryMinute == -1) {
+            // No fue titular y tampoco ingresó.
+            return new MatchParticipation(false, 0);
+        }
+
+        // Ingresar a los 90 cuenta como participación,
+        // aunque sume cero minutos enteros.
+        return new MatchParticipation(true, duration - entryMinute);
     }
 
     public List<FairPlayRow> getFairPlay(Championship championship) {
@@ -125,34 +199,50 @@ public class TournamentReportService {
                 .toList();
     }
 
-    public List<PlayerStatsRow> getPlayerStats(Championship championship) {
+    public List<PlayerStatsRow> getPlayerStats(
+            Championship championship
+    ) {
+        return getPlayerStats(championship, null);
+    }
+
+    // position == null significa "Todos".
+    public List<PlayerStatsRow> getPlayerStats(
+            Championship championship,
+            Position position
+    ) {
         List<PlayerStatsRow> rows = new ArrayList<>();
         List<ParticipationRow> participation = getParticipation(championship);
 
         for (Team team : championship.getTeams()) {
             for (Player player : team.getPlayers()) {
-                ParticipationRow playerParticipation = participation.stream()
-                        .filter(row -> row.getPlayer() == player)
-                        .findFirst()
-                        .orElse(new ParticipationRow(player, team, 0, 0));
 
-                int goals = countGoals(championship, player);
-                int goalkeeperGoalsAgainst = countGoalsAgainst(championship, player);
+                if (position == null || player.getPosition() == position) {
 
-                rows.add(new PlayerStatsRow(
-                        player,
-                        team,
-                        player.getPosition().name(),
-                        playerParticipation.getMatches(),
-                        playerParticipation.getMinutes(),
-                        goals,
-                        goalkeeperGoalsAgainst
-                ));
+                    ParticipationRow playerParticipation = participation.stream()
+                            .filter(row -> row.getPlayer() == player)
+                            .findFirst()
+                            .orElse(new ParticipationRow(player, team, 0, 0));
+
+                    int goals = countGoals(championship, player);
+                    int goalkeeperGoalsAgainst =
+                            countGoalsAgainst(championship, player);
+
+                    rows.add(new PlayerStatsRow(
+                            player,
+                            team,
+                            player.getPosition().name(),
+                            playerParticipation.getMatches(),
+                            playerParticipation.getMinutes(),
+                            goals,
+                            goalkeeperGoalsAgainst
+                    ));
+                }
             }
         }
 
         return rows.stream()
-                .sorted(Comparator.comparing(row -> row.getPlayer().getLastName()))
+                .sorted(Comparator.comparing(row ->
+                        row.getPlayer().getLastName()))
                 .toList();
     }
 
@@ -235,6 +325,14 @@ public class TournamentReportService {
                 .count();
     }
 
+    public double getAverageRefereeExperience(
+            Championship championship
+    ) {
+        return getRefereeStats(championship).stream()
+                .mapToInt(RefereeStatsRow::getYears)
+                .average()
+                .orElse(0.0);
+    }
     private int getAge(LocalDate birthDate) {
         return Period.between(birthDate, LocalDate.now()).getYears();
     }
@@ -365,6 +463,11 @@ public class TournamentReportService {
         public int getMinutes() { return minutes; }
         public int getGoals() { return goals; }
         public int getGoalsAgainst() { return goalsAgainst; }
+        public double getAverageGoalsAgainst() {
+            return matches == 0
+                    ? 0.0
+                    : (double) goalsAgainst / matches;
+        }
     }
 
     public static class RefereeStatsRow {

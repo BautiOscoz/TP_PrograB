@@ -13,6 +13,7 @@ import Core.domain.TournamentZone;
 import Core.persistance.ChampionshipRepository;
 import Core.report.TournamentReportService;
 import Core.report.MatchDetailsFormatter;
+import Core.enums.Position;
 import javafx.scene.control.ComboBox;
 import javafx.util.StringConverter;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -85,7 +86,8 @@ public class TournamentController {
     @FXML private Button simulateMatchdayBtn;
     @FXML private Button simulateKnockoutBtn;
     @FXML private TextArea matchdayResultsArea;
-
+    @FXML private HBox playerFilterBar;
+    @FXML private ComboBox<String> playerPositionFilter;
     private final TournamentReportService reportService = new TournamentReportService();
     private final ChampionshipRepository repository = new ChampionshipRepository();
     private Championship championship;
@@ -94,8 +96,26 @@ public class TournamentController {
     @FXML
     private void initialize() {
         configureColumns();
+
+        playerPositionFilter.getItems().setAll(
+                "All",
+                "Goalkeepers",
+                "Defenders",
+                "Midfielders",
+                "Forwards"
+        );
+
+        playerPositionFilter.setValue("All");
+
+        playerPositionFilter.setOnAction(event -> {
+            if (championship != null && playerFilterBar.isVisible()) {
+                handlePlayersStats();
+            }
+        });
+
         reportArea.setEditable(false);
         reportArea.setWrapText(true);
+
         showGroupTable();
         showKnockoutBracket(false);
     }
@@ -311,20 +331,29 @@ public class TournamentController {
         showReport();
 
         StringBuilder text = new StringBuilder();
+
         reportService.getTeamStats(championship).forEach(row ->
                 text.append(row.getTeam().getName())
                         .append(" - Avg age: ")
                         .append(String.format("%.1f", row.getAverageAge()))
                         .append(" - Coach: ")
                         .append(row.getCoach())
+                        .append(" - Coach age: ")
+                        .append(row.getCoachAge())
+                        .append(" - Coach nationality: ")
+                        .append(row.getCoachNationality())
                         .append(" - GF: ")
                         .append(row.getGoalsFor())
                         .append(" - GA: ")
                         .append(row.getGoalsAgainst())
                         .append(" - Effectiveness: ")
-                        .append(String.format("%.1f%%", row.getEffectiveness()))
+                        .append(String.format(
+                                "%.1f%%",
+                                row.getEffectiveness()
+                        ))
                         .append("\n")
         );
+
         reportArea.setText(text.toString());
     }
 
@@ -332,24 +361,56 @@ public class TournamentController {
     private void handlePlayersStats() {
         phaseLabel.setText("Players Stats");
         zoneTitleLabel.setVisible(false);
+
         showReport();
+        setPlayerFilterVisible(true);
+
+        Position position = switch (playerPositionFilter.getValue()) {
+            case "Goalkeepers" -> Position.GOALKEEPER;
+            case "Defenders" -> Position.DEFENDER;
+            case "Midfielders" -> Position.MIDFIELDER;
+            case "Fowards" -> Position.FORWARD;
+            default -> null;
+        };
 
         StringBuilder text = new StringBuilder();
-        reportService.getPlayerStats(championship).forEach(row ->
-                text.append(row.getPlayer().getName()).append(" ")
-                        .append(row.getPlayer().getLastName())
-                        .append(" - ")
-                        .append(row.getTeam().getName())
-                        .append(" - Position: ")
-                        .append(row.getPosition())
-                        .append(" - Matches: ")
-                        .append(row.getMatches())
-                        .append(" - Minutes: ")
-                        .append(row.getMinutes())
-                        .append(" - Goals: ")
-                        .append(row.getGoals())
-                        .append("\n")
-        );
+
+        reportService.getPlayerStats(championship, position).forEach(row -> {
+            text.append(row.getPlayer().getName())
+                    .append(" ")
+                    .append(row.getPlayer().getLastName())
+                    .append(" - ")
+                    .append(row.getTeam().getName())
+                    .append(" - Position: ")
+                    .append(row.getPosition())
+                    .append(" - Matches: ")
+                    .append(row.getMatches())
+                    .append(" - Minutes: ")
+                    .append(row.getMinutes())
+                    .append(" - Goals: ")
+                    .append(row.getGoals());
+
+            if (row.getPlayer().getPosition() == Position.GOALKEEPER) {
+                text.append(" - Goals conceded: ")
+                        .append(row.getGoalsAgainst())
+                        .append(" - Average goals conceded per match: ")
+                        .append(
+                                row.getMatches() == 0
+                                        ? "No matches played"
+                                        : String.format(
+                                        "%.2f",
+                                        row.getAverageGoalsAgainst()
+                                )
+                        );
+            }
+
+            text.append("\n");
+        });
+
+        if (text.length() == 0) {
+            text.append("No players found for the selected position.");
+        }
+
         reportArea.setText(text.toString());
     }
 
@@ -360,8 +421,10 @@ public class TournamentController {
         showReport();
 
         StringBuilder text = new StringBuilder();
+
         reportService.getRefereeStats(championship).forEach(row ->
-                text.append(row.getReferee().getName()).append(" ")
+                text.append(row.getReferee().getName())
+                        .append(" ")
                         .append(row.getReferee().getLastName())
                         .append(" - Matches: ")
                         .append(row.getMatches())
@@ -369,7 +432,20 @@ public class TournamentController {
                         .append(row.getYears())
                         .append("\n")
         );
+
+        text.append("\nAverage years of experience: ")
+                .append(String.format(
+                        "%.2f",
+                        reportService.getAverageRefereeExperience(championship)
+                ))
+                .append(" years\n");
+
         reportArea.setText(text.toString());
+    }
+
+    private void setPlayerFilterVisible(boolean visible) {
+        playerFilterBar.setVisible(visible);
+        playerFilterBar.setManaged(visible);
     }
 
     @FXML
@@ -505,34 +581,49 @@ public class TournamentController {
     }
 
     private void showGroupTable() {
+        setPlayerFilterVisible(false);
+
         standingsTable.setVisible(true);
         standingsTable.setManaged(true);
+
         reportArea.setVisible(false);
         reportArea.setManaged(false);
+
         knockoutBracket.setVisible(false);
         knockoutBracket.setManaged(false);
+
         matchdayResultsArea.setVisible(true);
         matchdayResultsArea.setManaged(true);
     }
 
     private void showReport() {
+        setPlayerFilterVisible(false);
+
         standingsTable.setVisible(false);
         standingsTable.setManaged(false);
+
         reportArea.setVisible(true);
         reportArea.setManaged(true);
+
         knockoutBracket.setVisible(false);
         knockoutBracket.setManaged(false);
+
         matchdayResultsArea.setVisible(false);
         matchdayResultsArea.setManaged(false);
     }
 
     private void showKnockoutBracket(boolean visible) {
+        setPlayerFilterVisible(false);
+
         standingsTable.setVisible(false);
         standingsTable.setManaged(false);
+
         reportArea.setVisible(false);
         reportArea.setManaged(false);
+
         knockoutBracket.setVisible(visible);
         knockoutBracket.setManaged(visible);
+
         matchdayResultsArea.setVisible(false);
         matchdayResultsArea.setManaged(false);
     }
