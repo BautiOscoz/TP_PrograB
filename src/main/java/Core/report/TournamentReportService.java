@@ -172,15 +172,21 @@ public class TournamentReportService {
         List<TeamStatsRow> rows = new ArrayList<>();
 
         for (Team team : championship.getTeams()) {
-            TeamStanding standing = getStanding(championship, team);
+            TeamStanding standing = getOverallStanding(championship, team);
+
             double averageAge = team.getPlayers().stream()
                     .mapToInt(player -> getAge(player.getBirthDate()))
                     .average()
                     .orElse(0);
+
             int coachAge = getAge(team.getCoach().getBirthDate());
-            double effectiveness = standing.getPlayed() == 0
-                    ? 0
-                    : standing.getPoints() * 100.0 / (standing.getPlayed() * 3);
+
+            double effectiveness = 0;
+
+            if (standing.getPlayed() > 0) {
+                effectiveness = standing.getPoints() * 100.0
+                        / (standing.getPlayed() * 3.0);
+            }
 
             rows.add(new TeamStatsRow(
                     team,
@@ -273,13 +279,27 @@ public class TournamentReportService {
                 .orElseThrow();
     }
 
-    private TeamStanding getStanding(Championship championship, Team team) {
-        return championship.getTournamentZones().stream()
-                .map(championship::getStandings)
-                .flatMap(List::stream)
-                .filter(standing -> standing.getTeam() == team)
-                .findFirst()
-                .orElse(new TeamStanding(team));
+    private TeamStanding getOverallStanding(
+            Championship championship,
+            Team team
+    ) {
+        TeamStanding standing = new TeamStanding(team);
+
+        for (Match match : championship.getPlayedMatches()) {
+            if (match.getHomeTeam() == team) {
+                standing.registerMatch(
+                        match.getHomeGoals(),
+                        match.getAwayGoals()
+                );
+            } else if (match.getAwayTeam() == team) {
+                standing.registerMatch(
+                        match.getAwayGoals(),
+                        match.getHomeGoals()
+                );
+            }
+        }
+
+        return standing;
     }
 
     private int getPlayedMinutes(Match match, Player player) {
