@@ -88,6 +88,11 @@ public class TournamentController {
     @FXML private TextArea matchdayResultsArea;
     @FXML private HBox playerFilterBar;
     @FXML private ComboBox<String> playerPositionFilter;
+    @FXML private ComboBox<PlayerChoice> individualPlayerFilter;
+    private boolean updatingPlayerChoices;
+    private record PlayerChoice(Player player, String label) {
+        @Override public String toString() { return label; }
+    }
     private final TournamentReportService reportService = new TournamentReportService();
     private final ChampionshipRepository repository = new ChampionshipRepository();
     private Championship championship;
@@ -106,6 +111,12 @@ public class TournamentController {
         );
 
         playerPositionFilter.setValue("All");
+
+        individualPlayerFilter.setOnAction(event -> {
+            if (!updatingPlayerChoices && championship != null && playerFilterBar.isVisible()) {
+                handlePlayersStats();
+            }
+        });
 
         playerPositionFilter.setOnAction(event -> {
             if (championship != null && playerFilterBar.isVisible()) {
@@ -369,21 +380,52 @@ public class TournamentController {
             case "Goalkeepers" -> Position.GOALKEEPER;
             case "Defenders" -> Position.DEFENDER;
             case "Midfielders" -> Position.MIDFIELDER;
-            case "Fowards" -> Position.FORWARD;
+            case "Forwards" -> Position.FORWARD;
             default -> null;
         };
 
         StringBuilder text = new StringBuilder();
 
-        reportService.getPlayerStats(championship, position).forEach(row -> {
+        var rows = reportService.getPlayerStats(championship, position);
+        PlayerChoice previous = individualPlayerFilter.getValue();
+        List<PlayerChoice> choices = new java.util.ArrayList<>();
+        choices.add(new PlayerChoice(null, "All players"));
+        rows.forEach(row -> choices.add(new PlayerChoice(row.getPlayer(),
+                row.getPlayer().getLastName() + ", " + row.getPlayer().getName()
+                        + " - " + row.getTeam().getName() + " (#" + row.getPlayer().getShirtNumber() + ")")));
+        updatingPlayerChoices = true;
+        try {
+            individualPlayerFilter.getItems().setAll(choices);
+            individualPlayerFilter.setValue(choices.stream()
+                    .filter(choice -> previous != null && choice.player() == previous.player())
+                    .findFirst().orElse(choices.get(0)));
+        } finally {
+            updatingPlayerChoices = false;
+        }
+        Player selectedPlayer = individualPlayerFilter.getValue().player();
+
+        rows.stream().filter(row -> selectedPlayer == null || row.getPlayer() == selectedPlayer).forEach(row -> {
             text.append(row.getPlayer().getName())
                     .append(" ")
                     .append(row.getPlayer().getLastName())
                     .append(" - ")
                     .append(row.getTeam().getName())
-                    .append(" - Position: ")
+                    .append("\nID: ").append(row.getPlayer().getId())
+                    .append(" | Document: ").append(row.getPlayer().getDocumentType())
+                    .append(" ").append(row.getPlayer().getDocumentNumber())
+                    .append("\nBirth date: ").append(row.getPlayer().getBirthDate())
+                    .append(" | Age: ").append(java.time.Period.between(
+                            row.getPlayer().getBirthDate(), LocalDate.now()).getYears())
+                    .append("\nShirt number: ").append(row.getPlayer().getShirtNumber())
+                    .append(" | Position: ")
                     .append(row.getPosition())
-                    .append(" - Matches: ")
+                    .append(" | Average rating: ")
+                    .append(String.format("%.2f", row.getPlayer().getAverageRating()))
+                    .append("\nSuspended for next match: ")
+                    .append(row.getPlayer().isSuspended() ? "Yes" : "No")
+                    .append("\nCharacteristics: ")
+                    .append(new java.util.TreeMap<>(row.getPlayer().getCharacteristics()))
+                    .append("\nMatches: ")
                     .append(row.getMatches())
                     .append(" - Minutes: ")
                     .append(row.getMinutes())
@@ -404,7 +446,7 @@ public class TournamentController {
                         );
             }
 
-            text.append("\n");
+            text.append("\n\n");
         });
 
         if (text.length() == 0) {

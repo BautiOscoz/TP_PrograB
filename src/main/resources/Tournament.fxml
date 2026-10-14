@@ -124,6 +124,9 @@
 
                                 <ComboBox fx:id="playerPositionFilter"
                                           prefWidth="190.0" />
+                                <Label text="Player:" />
+                                <ComboBox fx:id="individualPlayerFilter" prefWidth="320.0"
+                                          maxWidth="Infinity" HBox.hgrow="ALWAYS" />
                             </children>
                         </HBox>
 
