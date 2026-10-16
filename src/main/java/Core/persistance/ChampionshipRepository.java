@@ -9,9 +9,9 @@ public class ChampionshipRepository {
     public void save(Championship championship) {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_PATH))) {
             oos.writeObject(championship);
-            System.out.println("Estado del torneo guardado exitosamente en " + FILE_PATH);
+            System.out.println("Tournament saved successfully to " + FILE_PATH);
         } catch (IOException e) {
-            System.err.println("Error al serializar el campeonato: " + e.getMessage());
+            System.err.println("Could not save the tournament: " + e.getMessage());
         }
     }
 
@@ -23,10 +23,10 @@ public class ChampionshipRepository {
 
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_PATH))) {
             Championship championship = (Championship) ois.readObject();
-            System.out.println("Estado del torneo cargado desde " + FILE_PATH);
+            System.out.println("Tournament loaded from " + FILE_PATH);
             return championship;
         } catch (IOException | ClassNotFoundException e) {
-            System.err.println("Error al deserializar el campeonato: " + e.getMessage());
+            System.err.println("Could not load the tournament: " + e.getMessage());
             return null;
         }
     }

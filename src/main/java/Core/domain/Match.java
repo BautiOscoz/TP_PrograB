@@ -151,13 +151,13 @@ public abstract class Match implements Serializable {
     public void setStadium(Stadium stadium) {
         if (played) {
             throw new IllegalStateException(
-                    "No se puede cambiar el estadio de un partido jugado."
+                    "The stadium of a played match cannot be changed."
             );
         }
 
         if (stadium == null) {
             throw new IllegalArgumentException(
-                    "El estadio es obligatorio."
+                    "A stadium is required."
             );
         }
         this.stadium = new Stadium(

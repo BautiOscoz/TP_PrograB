@@ -260,8 +260,8 @@ public class TournamentController {
                                 + " " + played.getHomeGoals()
                                 + " - " + played.getAwayGoals()
                                 + " " + played.getAwayTeam().getName()
-                                + " | Estadio: " + played.getStadium().getName()
-                                + " | Ciudad: "
+                                + " | Stadium: " + played.getStadium().getName()
+                                + " | City: "
                                 + played.getStadium().getCity().getName()
                                 + " | " + championship.getKnockoutDecisionCriterion(played)
                 );
@@ -497,7 +497,7 @@ public class TournamentController {
     private void handleGetIdentifications() {
 
         if (championship == null) {
-            showError("Primero cargá un torneo.");
+            showError("Load a tournament first.");
             return;
         }
 
@@ -508,7 +508,7 @@ public class TournamentController {
         DirectoryChooser directoryChooser = new DirectoryChooser();
 
         directoryChooser.setTitle(
-                "Elegí la carpeta de fotografías"
+                "Choose the photographs folder"
         );
 
         File photos = directoryChooser.showDialog(
@@ -522,8 +522,8 @@ public class TournamentController {
         // Seleccionar dónde guardar el PDF.
         FileChooser chooser = new FileChooser();
 
-        chooser.setTitle("Guardar identificaciones");
-        chooser.setInitialFileName("identificaciones.pdf");
+        chooser.setTitle("Save participant IDs");
+        chooser.setInitialFileName("participant-ids.pdf");
 
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("PDF", "*.pdf")
@@ -541,7 +541,7 @@ public class TournamentController {
                 .toLowerCase(java.util.Locale.ROOT)
                 .endsWith(".pdf")) {
 
-            showError("El nombre del archivo debe terminar en .pdf.");
+            showError("The filename must end in .pdf.");
             return;
         }
 
@@ -577,9 +577,9 @@ public class TournamentController {
             showReport();
 
             String message =
-                    "PDF generado: " + selected.getAbsolutePath()
-                            + "\nIdentificaciones: " + result.total()
-                            + "\nSin fotografía: "
+                    "PDF generated: " + selected.getAbsolutePath()
+                            + "\nParticipant IDs: " + result.total()
+                            + "\nMissing photographs: "
                             + result.missingPhotos().size();
 
             reportArea.setText(
@@ -587,7 +587,7 @@ public class TournamentController {
                             + String.join("\n", result.missingPhotos())
             );
 
-            showInformation("Identificaciones", message);
+            showInformation("Participant IDs", message);
         });
 
         task.setOnFailed(event -> {
@@ -595,7 +595,7 @@ public class TournamentController {
             getIDBtn.setDisable(false);
 
             showError(
-                    "No se pudo generar el PDF: "
+                    "Could not generate the PDF: "
                             + task.getException().getMessage()
             );
         });
@@ -746,7 +746,7 @@ public class TournamentController {
         semiColumn.getChildren().clear();
         semiConnectorColumn.getChildren().clear();
         finalColumn.getChildren().clear();
-        winnerBanner.setText("GANADOR: -");
+        winnerBanner.setText("WINNER: -");
 
         List<FirstLegMatch> firstLegs = championship.getMatches().stream()
                 .map(Match::asFirstLeg)
@@ -771,7 +771,7 @@ public class TournamentController {
                             && !championship.isPendingPenaltyShootout(finalMatch)) {
                         Team winner = championship.getRecordedFinalWinner(finalMatch);
                         finalColumn.getChildren().add(createMatchCard(List.of(finalMatch), winner));
-                        winnerBanner.setText("GANADOR: " + winner.getName());
+                        winnerBanner.setText("WINNER: " + winner.getName());
                     } else if (championship.isPendingPenaltyShootout(finalMatch)) {
                         finalColumn.getChildren().add(createPendingPenaltyCard(finalMatch));
                     } else {
@@ -823,18 +823,18 @@ public class TournamentController {
         card.getChildren().add(new Label(first.getHomeTeam().getName()
                 + " vs " + first.getAwayTeam().getName()));
         if (first.isPlayed()) {
-            card.getChildren().add(new Label("Ida: " + first.getHomeGoals()
+            card.getChildren().add(new Label("First leg: " + first.getHomeGoals()
                     + " - " + first.getAwayGoals()));
         } else {
-            card.getChildren().add(new Label("Ida pendiente"));
+            card.getChildren().add(new Label("First leg pending"));
         }
         if (second == null || !second.isPlayed()) {
-            card.getChildren().add(new Label("Vuelta pendiente"));
+            card.getChildren().add(new Label("Second leg pending"));
         } else if (championship.isPendingPenaltyShootout(second)) {
-            card.getChildren().add(new Label("Penales pendientes"));
+            card.getChildren().add(new Label("Penalty shootout pending"));
         }
         if (first.isPlayed()) {
-            card.getChildren().add(new Label("Click para ver incidencias"));
+            card.getChildren().add(new Label("Click to view incidents"));
             card.setOnMouseClicked(event -> showMatchDetails(
                     second != null && second.isPlayed()
                             ? List.of(first, second)
@@ -850,8 +850,8 @@ public class TournamentController {
         card.getChildren().add(new Label(match.getHomeTeam().getName()
                 + " " + match.getHomeGoals() + " - " + match.getAwayGoals()
                 + " " + match.getAwayTeam().getName()));
-        card.getChildren().add(new Label("Penales pendientes"));
-        card.getChildren().add(new Label("Click para ver incidencias"));
+        card.getChildren().add(new Label("Penalty shootout pending"));
+        card.getChildren().add(new Label("Click to view incidents"));
         card.setOnMouseClicked(event -> showMatchDetails(List.of(match)));
         return card;
     }
@@ -861,7 +861,7 @@ public class TournamentController {
         card.getStyleClass().add("match-card");
         card.getChildren().add(new Label(match.getHomeTeam().getName()
                 + " vs " + match.getAwayTeam().getName()));
-        card.getChildren().add(new Label("Final pendiente"));
+        card.getChildren().add(new Label("Final pending"));
         return card;
     }
 
@@ -877,7 +877,7 @@ public class TournamentController {
 
         if (isSettledByPenalties(displayMatch)) {
             int[] penalties = getPenaltyScore(displayMatch);
-            Label penaltyLabel = new Label("Penales " + penalties[0] + " - " + penalties[1]);
+            Label penaltyLabel = new Label("Penalties " + penalties[0] + " - " + penalties[1]);
             penaltyLabel.getStyleClass().add("penalty-score");
             penaltyLabel.setMaxWidth(Double.MAX_VALUE);
             penaltyLabel.setAlignment(javafx.geometry.Pos.CENTER);
@@ -886,19 +886,19 @@ public class TournamentController {
 
         if (matches.size() == 2) {
             int[] aggregate = getAggregateScore(matches.get(0), matches.get(1));
-            Label aggregateLabel = new Label("Global " + aggregate[0] + " - " + aggregate[1]);
+            Label aggregateLabel = new Label("Aggregate " + aggregate[0] + " - " + aggregate[1]);
             aggregateLabel.getStyleClass().add("aggregate-score");
             aggregateLabel.setMaxWidth(Double.MAX_VALUE);
             aggregateLabel.setAlignment(javafx.geometry.Pos.CENTER);
             card.getChildren().add(aggregateLabel);
         }
 
-        Label winnerLabel = new Label("GANADOR: " + winner.getName());
+        Label winnerLabel = new Label("WINNER: " + winner.getName());
         winnerLabel.getStyleClass().add("match-winner");
         winnerLabel.setMaxWidth(Double.MAX_VALUE);
         winnerLabel.setAlignment(javafx.geometry.Pos.CENTER);
         card.getChildren().add(winnerLabel);
-        card.getChildren().add(new Label("Click para ver incidencias"));
+        card.getChildren().add(new Label("Click to view incidents"));
         card.setOnMouseClicked(event -> showMatchDetails(matches));
         return card;
     }

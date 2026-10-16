@@ -76,13 +76,13 @@
                                 <TableColumn fx:id="positionColumn" prefWidth="45.0" text="#" />
                                 <TableColumn fx:id="teamColumn" prefWidth="220.0" text="Team" />
                                 <TableColumn fx:id="pointsColumn" prefWidth="55.0" text="PTS" />
-                                <TableColumn fx:id="playedColumn" prefWidth="55.0" text="PJ" />
-                                <TableColumn fx:id="wonColumn" prefWidth="55.0" text="PG" />
-                                <TableColumn fx:id="drawnColumn" prefWidth="55.0" text="PE" />
-                                <TableColumn fx:id="lostColumn" prefWidth="55.0" text="PP" />
+                                <TableColumn fx:id="playedColumn" prefWidth="55.0" text="P" />
+                                <TableColumn fx:id="wonColumn" prefWidth="55.0" text="W" />
+                                <TableColumn fx:id="drawnColumn" prefWidth="55.0" text="D" />
+                                <TableColumn fx:id="lostColumn" prefWidth="55.0" text="L" />
                                 <TableColumn fx:id="goalsForColumn" prefWidth="55.0" text="GF" />
-                                <TableColumn fx:id="goalsAgainstColumn" prefWidth="55.0" text="GC" />
-                                <TableColumn fx:id="differenceColumn" prefWidth="55.0" text="DG" />
+                                <TableColumn fx:id="goalsAgainstColumn" prefWidth="55.0" text="GA" />
+                                <TableColumn fx:id="differenceColumn" prefWidth="55.0" text="GD" />
                             </columns>
                         </TableView>
                         <TextArea fx:id="matchdayResultsArea"
@@ -97,9 +97,9 @@
                             <children>
                                 <HBox alignment="CENTER" spacing="10.0" styleClass="round-header-row">
                                     <children>
-                                        <Label minWidth="170.0" styleClass="round-title" text="CUARTOS" />
+                                        <Label minWidth="170.0" styleClass="round-title" text="QUARTER-FINALS" />
                                         <Label minWidth="28.0" text="" />
-                                        <Label minWidth="170.0" styleClass="round-title" text="SEMIFINALES" />
+                                        <Label minWidth="170.0" styleClass="round-title" text="SEMI-FINALS" />
                                         <Label minWidth="28.0" text="" />
                                         <Label minWidth="170.0" styleClass="round-title" text="FINAL" />
                                     </children>
@@ -113,7 +113,7 @@
                                         <VBox fx:id="finalColumn" alignment="CENTER" maxWidth="170.0" prefWidth="170.0" spacing="8.0" styleClass="bracket-column" />
                                     </children>
                                 </HBox>
-                                <Label fx:id="winnerBanner" alignment="CENTER" maxWidth="Infinity" styleClass="winner-banner" text="GANADOR: -" />
+                                <Label fx:id="winnerBanner" alignment="CENTER" maxWidth="Infinity" styleClass="winner-banner" text="WINNER: -" />
                             </children>
                         </VBox>
                         <HBox fx:id="playerFilterBar"

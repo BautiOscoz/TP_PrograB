@@ -57,7 +57,7 @@ public class MainMenuController {
 
     @FXML
     private void handleStats(ActionEvent event) {
-        System.out.println("Stats - pendiente");
+        System.out.println("Stats - pending");
     }
 
     @FXML

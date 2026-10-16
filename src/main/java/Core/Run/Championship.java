@@ -771,13 +771,13 @@ public class Championship implements Serializable {
                 || hasPendingGroupMatchdays()) {
 
             throw new IllegalStateException(
-                    "Primero tenés que terminar la fase de grupos."
+                    "Complete the group stage first."
             );
         }
 
         if (stage == TournamentStage.FINISHED) {
             throw new IllegalStateException(
-                    "El torneo ya terminó."
+                    "The tournament has already finished."
             );
         }
 
@@ -801,7 +801,7 @@ public class Championship implements Serializable {
                 )
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
-                        "No hay partidos pendientes para esta fase."
+                        "There are no pending matches in this stage."
                 ));
 
         // Consulta los disponibles en PostgreSQL antes de cada partido.
@@ -811,8 +811,8 @@ public class Championship implements Serializable {
 
         if (availableStadiums.isEmpty()) {
             throw new IllegalStateException(
-                    "No quedan estadios sin utilizar. "
-                            + "Agregá otro estadio antes de continuar."
+                    "There are no unused stadiums left. "
+                            + "Add another stadium before continuing."
             );
         }
 
@@ -837,7 +837,7 @@ public class Championship implements Serializable {
                 .filter(Match::isPlayed)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException(
-                        "No se encontró el partido de ida de esta serie."
+                        "The first leg of this series was not found."
                 ));
     }
 
@@ -869,7 +869,7 @@ public class Championship implements Serializable {
             FinalMatch finalMatch = match.asFinal();
             if (finalMatch == null) {
                 throw new IllegalStateException(
-                        "El partido pendiente no admite una definición por penales."
+                        "The pending match cannot be decided by a penalty shootout."
                 );
             }
             finalMatch.setSettledByPenalties(true);
@@ -895,10 +895,10 @@ public class Championship implements Serializable {
 
     public String getKnockoutDecisionCriterion(Match match) {
         if (isPendingPenaltyShootout(match)) {
-            return "Empate: definición por penales pendiente";
+            return "Tie: penalty shootout pending";
         }
         if (match.isSettledByPenalties()) {
-            return "Ganador definido por penales";
+            return "Winner decided by penalty shootout";
         }
 
         SecondLegMatch secondLeg = match.asSecondLeg();
@@ -908,15 +908,15 @@ public class Championship implements Serializable {
             Team teamB = firstLeg.getAwayTeam();
             if (getSeriesPoints(firstLeg, secondLeg, teamA)
                     != getSeriesPoints(firstLeg, secondLeg, teamB)) {
-                return "Ganador definido por puntos en la serie";
+                return "Winner decided by series points";
             }
-            return "Ganador definido por diferencia de gol con gol visitante doble";
+            return "Winner decided by goal difference (away goals count double)";
         }
 
         if (match.asFinal() != null) {
-            return "Ganador definido por el resultado de los 90 minutos";
+            return "Winner decided by the 90-minute result";
         }
-        return "Partido de ida: la serie continúa";
+        return "First leg: the series continues";
     }
 
     List<Stadium> getUnusedStadiums() {
@@ -1122,7 +1122,7 @@ public class Championship implements Serializable {
 
         } catch (SQLException e) {
             throw new IllegalStateException(
-                    "No se pudieron cargar los estadios desde PostgreSQL.",
+                    "Could not load stadiums from PostgreSQL.",
                     e
             );
         }
@@ -1135,10 +1135,10 @@ public class Championship implements Serializable {
         Scanner scanner = new Scanner(System.in);
         if (repository.exists()) {
             System.out.println("==========================================");
-            System.out.println("Se encontró una partida guardada previamente.");
-            System.out.println("1. Continuar torneo guardado");
-            System.out.println("2. Iniciar un nuevo torneo (se sobrescribirá el anterior)");
-            System.out.print("Seleccione una opción: ");
+            System.out.println("A saved tournament was found.");
+            System.out.println("1. Continue the saved tournament");
+            System.out.println("2. Start a new tournament (overwrites the previous save)");
+            System.out.print("Select an option: ");
 
             int opcion = scanner.nextInt();
             scanner.nextLine();
@@ -1147,7 +1147,7 @@ public class Championship implements Serializable {
             }
         }
         if (championship == null) {
-            System.out.println("\nInicializando un nuevo torneo desde torneo.json...");
+            System.out.println("\nStarting a new tournament from torneo.json...");
             championship = new Championship("torneo.json");
         }
         MatchConsoleReporter matchReporter =
@@ -1198,11 +1198,11 @@ public class Championship implements Serializable {
         } else {
             System.out.println();
             System.out.println(
-                    "La fase de grupos ya estaba completa."
+                    "The group stage was already complete."
             );
 
             System.out.println(
-                    "Resultados y posiciones guardadas:"
+                    "Saved results and standings:"
             );
 
             championship.getPlayedMatches()
@@ -1227,7 +1227,7 @@ public class Championship implements Serializable {
             repository.save(championship);
         }
 
-        System.out.println("=== CAMPEÓN ===");
+        System.out.println("=== CHAMPION ===");
         if (championship.getChampion() != null) {
             System.out.println(championship.getChampion().getName());
         } else {
@@ -1242,7 +1242,7 @@ public class Championship implements Serializable {
         }
 
         System.out.println(
-                "Cantidad total de partidos: "
+                "Total matches: "
                         + championship.getMatches().size()
         );
 
