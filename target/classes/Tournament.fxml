@@ -88,8 +88,11 @@
                         <TextArea fx:id="matchdayResultsArea"
                                   editable="false"
                                   wrapText="true"
-                                  prefHeight="220.0"
-                                  styleClass="report-area" />
+                                  prefHeight="300.0"
+                                  minHeight="150.0"
+                                  styleClass="report-area"
+                                  style="-fx-font-family: monospace; -fx-font-size: 12px;"
+                                  VBox.vgrow="ALWAYS"/>
                         <VBox fx:id="knockoutBracket" minHeight="0.0" spacing="10.0" styleClass="knockout-bracket" VBox.vgrow="ALWAYS">
                             <children>
                                 <HBox alignment="CENTER" spacing="10.0" styleClass="round-header-row">

@@ -45,6 +45,7 @@ import java.util.Objects;
 import Core.enums.TournamentStage;
 import java.time.LocalDate;
 import java.util.Comparator;
+import Core.report.GroupEvolutionReportService;
 
 public class TournamentController {
 
@@ -95,6 +96,8 @@ public class TournamentController {
     }
     private final TournamentReportService reportService = new TournamentReportService();
     private final ChampionshipRepository repository = new ChampionshipRepository();
+    private final GroupEvolutionReportService groupEvolutionReportService =
+            new GroupEvolutionReportService();
     private Championship championship;
     private String tournamentName;
 
@@ -169,7 +172,7 @@ public class TournamentController {
         );
     }
 
-    private void showLatestMatchdayResults() {
+  /*  private void showLatestMatchdayResults() {
         int latestMatchday = championship.getPlayedMatches().stream()
                 .filter(Match::isGroupStage)
                 .mapToInt(Match::getMatchday)
@@ -196,7 +199,7 @@ public class TournamentController {
 
         matchdayResultsArea.setText(results.toString());
     }
-
+*/
     @FXML
     private void handleGroupStage() {
         showGroupStage();
@@ -615,11 +618,7 @@ public class TournamentController {
     }
 
     private void showGroupStage() {
-        phaseLabel.setText("Group Stage");
-        zoneTitleLabel.setVisible(true);
-        showGroupTable();
         showZone(0);
-        showLatestMatchdayResults();
     }
 
     private void showGroupTable() {
@@ -671,20 +670,35 @@ public class TournamentController {
     }
 
     private void showZone(int zoneIndex) {
-        if (championship == null) {
-            return;
-        }
+        if (championship != null) {
+            List<TournamentZone> zones =
+                    championship.getTournamentZones();
 
-        List<TournamentZone> zones = championship.getTournamentZones();
-        if (zoneIndex < 0 || zoneIndex >= zones.size()) {
-            return;
-        }
+            if (zoneIndex >= 0 && zoneIndex < zones.size()) {
+                TournamentZone zone = zones.get(zoneIndex);
 
-        TournamentZone zone = zones.get(zoneIndex);
-        zoneTitleLabel.setText(zone.getName());
-        standingsTable.getItems().setAll(
-                championship.getStandings(zone)
-        );
+                showGroupTable();
+
+                phaseLabel.setText("Group Stage");
+                zoneTitleLabel.setVisible(true);
+                zoneTitleLabel.setText(zone.getName());
+
+                // Tabla actual de la zona.
+                standingsTable.getItems().setAll(
+                        championship.getStandings(zone)
+                );
+
+                // Evolución de las tablas partido por partido.
+                matchdayResultsArea.setText(
+                        groupEvolutionReportService.buildReport(
+                                zone,
+                                championship.getMatches()
+                        )
+                );
+
+                matchdayResultsArea.positionCaret(0);
+            }
+        }
     }
 
 
