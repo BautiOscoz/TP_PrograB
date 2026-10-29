@@ -24,6 +24,31 @@ public abstract class Match implements Serializable {
     private Lineup homeLineup;
     private Lineup awayLineup;
     private boolean played;
+    private String administrativeReason;
+    private int postponements;
+
+    public boolean isForfeit() { return administrativeReason != null; }
+    public String getAdministrativeReason() { return administrativeReason; }
+    public int getPostponements() { return postponements; }
+
+    /** A resolved fixture, but no football was played and no player earns minutes. */
+    public void awardForfeit(boolean homeUnableToPlay) {
+        if (played) throw new IllegalStateException("The match is already resolved.");
+        homeGoals = homeUnableToPlay ? 0 : 3;
+        awayGoals = homeUnableToPlay ? 3 : 0;
+        administrativeReason = (homeUnableToPlay ? homeTeam : awayTeam).getName()
+                + " cannot field a valid lineup. Administrative result (0-3 defeat).";
+        homeLineup = null;
+        awayLineup = null;
+        incidents.clear();
+        played = true;
+    }
+
+    public void postponeForUnavailableTeams() {
+        if (played) throw new IllegalStateException("A resolved match cannot be postponed.");
+        matchDate = matchDate.plusDays(1);
+        postponements++;
+    }
 
     public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
         this.matchDate = matchDate;

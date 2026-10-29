@@ -11,11 +11,11 @@ public class View extends Application {
     public void start(Stage stage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/MainMenu.fxml"));
         Parent root = loader.load();
-        Scene scene = new Scene(root);
+        Scene scene = new Scene(root, 1080, 720);
         stage.setTitle("International Clubs Cup");
-        stage.setMinWidth(1080);
-        stage.setMinHeight(680);
-        stage.setResizable(false);
+        stage.setMinWidth(1100);
+        stage.setMinHeight(720);
+        stage.setResizable(true);
         stage.setScene(scene);
         stage.show();
     }

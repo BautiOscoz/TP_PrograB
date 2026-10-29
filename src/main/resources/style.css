@@ -1,6 +1,7 @@
 .root {
-    -fx-font-family: "Arial";
+    -fx-font-family: "Segoe UI", "Arial";
 }
+
 
 .custom-button,
 .secondary-button,
@@ -151,8 +152,6 @@
 .knockout-bracket {
     -fx-padding: 2px 0 4px 0;
     -fx-background-color: #f3f4f6;
-    -fx-pref-height: 490px;
-    -fx-max-height: 490px;
 }
 
 
@@ -179,9 +178,9 @@
     -fx-pref-width: 170px;
     -fx-min-width: 170px;
     -fx-max-width: 170px;
-    -fx-pref-height: 92px;
-    -fx-min-height: 92px;
-    -fx-max-height: 92px;
+    -fx-pref-height: 128px;
+    -fx-min-height: 128px;
+    -fx-max-height: 128px;
     -fx-padding: 4px 7px;
     -fx-background-color: white;
     -fx-border-color: #cbd5e1;
@@ -347,4 +346,93 @@
 .crud-actions .button {
     -fx-pref-width: 100px;
     -fx-pref-height: 32px;
+}
+
+/* Tournament dashboard surfaces. Form and database screens keep their own palette. */
+.content-area {
+    -fx-background-color: #101d2d;
+}
+.content-area .label, .match-dialog .label {
+    -fx-text-fill: #dce6f2;
+}
+.content-area .page-title {
+    -fx-text-fill: #f4f7fc;
+}
+.content-area .phase-label, .content-area .ranking-summary {
+    -fx-text-fill: #a5b8ce;
+}
+.page-header {
+    -fx-padding: 0 0 14px 0;
+    -fx-border-color: transparent transparent #30445c transparent;
+}
+.sidebar {
+    -fx-border-color: transparent #30445c transparent transparent;
+}
+.content-area .report-area, .match-dialog .report-area {
+    -fx-control-inner-background: #1b2c40;
+    -fx-background-color: #1b2c40;
+    -fx-text-fill: #e1eaf5;
+    -fx-border-color: #30445c;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-highlight-fill: #35567a;
+    -fx-padding: 8px;
+    -fx-font-size: 13px;
+}
+.content-area .report-area .content, .match-dialog .report-area .content {
+    -fx-background-color: #1b2c40;
+}
+.ranking-table, .content-area .standings-table {
+    -fx-background-color: #1b2c40;
+    -fx-control-inner-background: #1b2c40;
+    -fx-control-inner-background-alt: #203248;
+    -fx-border-color: #30445c;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 3px;
+    -fx-table-cell-border-color: transparent;
+}
+.ranking-table .column-header-background, .ranking-table .column-header,
+.ranking-table .filler, .content-area .standings-table .column-header-background,
+.content-area .standings-table .column-header, .content-area .standings-table .filler {
+    -fx-background-color: #263e57;
+}
+.ranking-table .column-header .label, .content-area .standings-table .column-header .label {
+    -fx-text-fill: #f0d681;
+    -fx-font-weight: bold;
+    -fx-padding: 7px 2px;
+}
+.ranking-table .table-cell, .content-area .standings-table .table-cell {
+    -fx-text-fill: #e1eaf5;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 5px 9px;
+}
+.ranking-table .table-row-cell { -fx-cell-size: 38px; }
+.ranking-table .table-row-cell:selected, .content-area .standings-table .table-row-cell:selected {
+    -fx-background-color: #36577a;
+}
+.ranking-table .table-row-cell:empty, .content-area .standings-table .table-row-cell:empty {
+    -fx-background-color: #1b2c40;
+}
+.ranking-table .table-row-cell:empty .table-cell { -fx-border-width: 0; }
+.content-area .knockout-bracket { -fx-background-color: transparent; }
+.bracket-scroll, .bracket-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.form-card .button { -fx-min-height: 34px; }
+.content-area .match-card {
+    -fx-background-color: #1b2c40;
+    -fx-border-color: #3c536c;
+    -fx-cursor: hand;
+}
+.content-area .match-card:hover { -fx-border-color: #d4af37; }
+.content-area .match-team-winner, .content-area .match-score-winner,
+.content-area .match-winner { -fx-text-fill: #83dcb0; }
+.content-area .winner-banner { -fx-text-fill: #f0d681; }
+.content-area .combo-box .list-cell, .match-dialog .combo-box .list-cell {
+    -fx-text-fill: #172b40;
+}
+.match-dialog, .match-dialog > .header-panel {
+    -fx-background-color: #101d2d;
 }

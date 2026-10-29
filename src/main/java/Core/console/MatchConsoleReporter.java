@@ -17,6 +17,15 @@ public class MatchConsoleReporter {
         System.out.println(match.getHomeTeam().getName() + " vs " + match.getAwayTeam().getName());
         System.out.println("Date: " + match.getMatchDate().format(DATE_FORMAT));
         System.out.println("Referee: " + fullName(match.getReferee()));
+        if (!match.isPlayed()) {
+            System.out.println("Pending / postponed match. No result recorded.");
+            return;
+        }
+        if (match.isForfeit()) {
+            System.out.println("NOT DISPUTED: " + match.getAdministrativeReason());
+            System.out.println("Administrative score: " + match.getHomeGoals() + " - " + match.getAwayGoals());
+            return;
+        }
         System.out.println("Home formation: " + match.getHomeLineup().getFormation());
         System.out.println("Away formation: " + match.getAwayLineup().getFormation());
         System.out.println("------------------------------------------------------------");

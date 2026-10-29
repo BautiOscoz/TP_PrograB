@@ -44,6 +44,14 @@ public class GroupEvolutionReportService {
                 .append(zone.getName())
                 .append("\n\n");
 
+        matches.stream().filter(Match::isGroupStage)
+                .filter(m -> !m.isPlayed() && m.getPostponements() > 0)
+                .filter(m -> zone.getTeams().contains(m.getHomeTeam()))
+                .forEach(m -> text.append("POSTPONED: ").append(m.getHomeTeam().getName())
+                        .append(" vs ").append(m.getAwayTeam().getName())
+                        .append(" | New date: ").append(m.getMatchDate())
+                        .append(" | Previous suspensions served.\n\n"));
+
         if (zoneMatches.isEmpty()) {
             text.append("No group matches have been played yet.\n");
         } else {
@@ -84,6 +92,8 @@ public class GroupEvolutionReportService {
                         .append("\n\n");
 
                 // Ahora incorporamos su resultado.
+                if (match.isForfeit()) text.append("NOT DISPUTED: ")
+                        .append(match.getAdministrativeReason()).append("\n\n");
                 previousMatches.add(match);
 
                 text.append("AFTER THE MATCH\n");

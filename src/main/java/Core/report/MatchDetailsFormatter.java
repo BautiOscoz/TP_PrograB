@@ -19,7 +19,12 @@ public class MatchDetailsFormatter {
 
     public String format(Championship championship, Match match) {
         StringBuilder text = new StringBuilder(title(match)).append("\n\n");
+        if (match.getPostponements() > 0) {
+            text.append("Rescheduled due to unavailable teams; previous suspensions served.\n\n");
+        }
         if (!match.isPlayed()) return text.append("Not played yet.").toString();
+        if (match.isForfeit()) text.append("NOT DISPUTED: ")
+                .append(match.getAdministrativeReason()).append("\n\n");
         text.append("Referee: ").append(name(match.getReferee())).append("\nVenue: ");
         Stadium stadium = match.getStadium();
         text.append(stadium == null ? "Not assigned" : stadium.getName()
@@ -45,9 +50,13 @@ public class MatchDetailsFormatter {
                 }
             }
         }
-        lineup(text, match.getHomeTeam(), match.getHomeLineup());
-        lineup(text, match.getAwayTeam(), match.getAwayLineup());
-        text.append("\nMATCH INCIDENTS (90 minutes)\n");
+        if (!match.isForfeit()) {
+            lineup(text, match.getHomeTeam(), match.getHomeLineup());
+            lineup(text, match.getAwayTeam(), match.getAwayLineup());
+            text.append("\nMATCH INCIDENTS (90 minutes)\n");
+        } else {
+            text.append("\nNo match minutes or goals credited to players.\n");
+        }
         List<Incident> incidents = match.getIncidents().stream()
                 .filter(i -> !i.isShootoutPenalty())
                 .sorted(Comparator.comparingInt(Incident::getMinute)).toList();

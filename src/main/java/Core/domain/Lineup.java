@@ -40,7 +40,7 @@ public class Lineup implements Serializable {
 
     public List<Player> selectBestLineup() {
         List<Player> available = team.getPlayers().stream()
-                .filter(player -> !player.serveSuspensionIfNeeded())
+                .filter(player -> !player.isSuspended())
                 .sorted(Comparator.comparingDouble(Player::getAverageRating).reversed())
                 .toList();
 

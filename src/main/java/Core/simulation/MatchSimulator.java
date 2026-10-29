@@ -35,11 +35,7 @@ public class MatchSimulator {
                 .filter(formation -> Lineup.canUseFormation(team, formation))
                 .toList();
 
-        if (validFormations.isEmpty()) {
-            throw new IllegalStateException(
-                    team.getName() + " does not have enough players for any formation."
-            );
-        }
+        if (validFormations.isEmpty()) return null;
 
         return validFormations.get(random.nextInt(validFormations.size()));
     }
@@ -59,10 +55,26 @@ public class MatchSimulator {
         FormationType homeTactics = chooseRandomFormation(match.getHomeTeam());
         FormationType awayTactics = chooseRandomFormation(match.getAwayTeam());
 
+        if (homeTactics == null && awayTactics == null) {
+            if (unavailableHomePlayers.isEmpty() && unavailableAwayPlayers.isEmpty()) {
+                throw new IllegalStateException("Neither team can field a lineup, even without suspensions. Correct the squads before continuing.");
+            }
+            match.postponeForUnavailableTeams();
+            serveSuspensions(unavailableHomePlayers, unavailableAwayPlayers);
+            return;
+        }
+        if (homeTactics == null || awayTactics == null) {
+            match.awardForfeit(homeTactics == null);
+            serveSuspensions(unavailableHomePlayers, unavailableAwayPlayers);
+            return;
+        }
+
         Lineup homeLineup = new Lineup(match.getHomeTeam(), homeTactics);
         Lineup awayLineup = new Lineup(match.getAwayTeam(), awayTactics);
 
         match.setInitialLineups(homeLineup, awayLineup);
+        // Clear only the bans served today, before any new red cards are generated.
+        serveSuspensions(unavailableHomePlayers, unavailableAwayPlayers);
 
         double homeStrength = match.getHomeTeam().getCompetitiveStrength() + 3.0;
         double awayStrength = match.getAwayTeam().getCompetitiveStrength();
@@ -80,6 +92,23 @@ public class MatchSimulator {
         addGoals(match, awayGoals, match.getAwayTeam(), match.getHomeTeam());
 
         match.setPlayed(true);
+    }
+
+    private void serveSuspensions(Set<Player> home, Set<Player> away) {
+        home.forEach(Player::serveSuspensionIfNeeded);
+        away.forEach(Player::serveSuspensionIfNeeded);
+    }
+
+    /** A separate shootout after an administrative second leg, not a played lineup. */
+    public void prepareAdministrativeShootout(Match match) {
+        if (!match.isForfeit() || match.getHomeLineup() != null) return;
+        FormationType home = chooseRandomFormation(match.getHomeTeam());
+        FormationType away = chooseRandomFormation(match.getAwayTeam());
+        if (home == null || away == null) {
+            throw new IllegalStateException("The series is tied, but a team still cannot field players for the shootout. Correct the squad before continuing.");
+        }
+        match.setInitialLineups(new Lineup(match.getHomeTeam(), home),
+                new Lineup(match.getAwayTeam(), away));
     }
 
     private int sampleGoals(double rawExpectedGoals) {

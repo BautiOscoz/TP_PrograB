@@ -72,7 +72,7 @@ public class NewTournamentController {
         TournamentController controller = loader.getController();
         controller.setTournament(championship, tournamentName);
 
-        rootPane.getChildren().setAll(view);
+        rootPane.getScene().setRoot(view);
     }
 
     @FXML
@@ -81,7 +81,7 @@ public class NewTournamentController {
             Parent view = FXMLLoader.load(
                     getClass().getResource("/MainMenu.fxml")
             );
-            rootPane.getChildren().setAll(view);
+            rootPane.getScene().setRoot(view);
         } catch (IOException | IllegalStateException e) {
             e.printStackTrace();
         }

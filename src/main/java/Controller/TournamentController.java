@@ -65,7 +65,9 @@ public class TournamentController {
     @FXML private TableColumn<TeamStanding, Number> goalsAgainstColumn;
     @FXML private TableColumn<TeamStanding, Number> differenceColumn;
     @FXML private TextArea reportArea;
+    @FXML private VBox rankingPanel;
     @FXML private VBox knockoutBracket;
+    @FXML private javafx.scene.control.ScrollPane knockoutScroll;
     @FXML private HBox bracketContent;
     @FXML private VBox quarterColumn;
     @FXML private VBox quarterConnectorColumn;
@@ -104,6 +106,7 @@ public class TournamentController {
     @FXML
     private void initialize() {
         configureColumns();
+        zoneTitleLabel.managedProperty().bind(zoneTitleLabel.visibleProperty());
 
         playerPositionFilter.getItems().setAll(
                 "All",
@@ -151,12 +154,21 @@ public class TournamentController {
         }
 
         int playedMatchday = championship.getCurrentMatchday();
-        championship.simulateNextMatchday();
+        try {
+            championship.simulateNextMatchday();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            saveTournament();
+            showGroupStage();
+            updateSimulationButtons();
+            showError(e.getMessage());
+            return;
+        }
         scheduleQuarterFinalsIfNeeded();
-        repository.save(championship);
+        saveTournament();
 
         showGroupStage();
-        phaseLabel.setText("Group Stage - Matchday " + playedMatchday + " played");
+        phaseLabel.setText("Group Stage - Matchday " + playedMatchday
+                + (championship.getCurrentMatchday() == playedMatchday ? " has postponed matches" : " completed"));
         updateSimulationButtons();
     }
 
@@ -172,34 +184,6 @@ public class TournamentController {
         );
     }
 
-  /*  private void showLatestMatchdayResults() {
-        int latestMatchday = championship.getPlayedMatches().stream()
-                .filter(Match::isGroupStage)
-                .mapToInt(Match::getMatchday)
-                .max()
-                .orElse(0);
-
-        if (latestMatchday == 0) {
-            matchdayResultsArea.setText("No matchdays have been played yet.");
-            return;
-        }
-
-        StringBuilder results = new StringBuilder();
-        results.append("MATCHDAY ").append(latestMatchday).append("\n\n");
-
-        championship.getPlayedMatches().stream()
-                .filter(Match::isGroupStage)
-                .filter(match -> match.getMatchday() == latestMatchday)
-                .forEach(match -> results
-                        .append(match.getHomeTeam().getName())
-                        .append(" ").append(match.getHomeGoals())
-                        .append(" - ").append(match.getAwayGoals())
-                        .append(" ").append(match.getAwayTeam().getName())
-                        .append("\n"));
-
-        matchdayResultsArea.setText(results.toString());
-    }
-*/
     @FXML
     private void handleGroupStage() {
         showGroupStage();
@@ -245,8 +229,12 @@ public class TournamentController {
         try {
             boolean wasPenaltyShootoutPending = championship.hasPendingPenaltyShootout();
             Match played = championship.simulateNextKnockoutMatch();
-            repository.save(championship);
-            if (wasPenaltyShootoutPending) {
+            saveTournament();
+            if (!played.isPlayed()) {
+                phaseLabel.setText(championship.getKnockoutDecisionCriterion(played));
+            } else if (played.isForfeit() && !wasPenaltyShootoutPending) {
+                phaseLabel.setText(played.getAdministrativeReason());
+            } else if (wasPenaltyShootoutPending) {
                 int[] penalties = getPenaltyScore(played);
                 phaseLabel.setText(
                         "Penalties: " + played.getHomeTeam().getName()
@@ -271,71 +259,63 @@ public class TournamentController {
             buildKnockoutBracket();
             updateSimulationButtons();
         } catch (IllegalStateException | IllegalArgumentException e) {
-            repository.save(championship);
+            saveTournament();
             showError(e.getMessage());
         }
     }
 
     @FXML
     private void handleTopScorers() {
-        phaseLabel.setText("Top Scorers");
-        zoneTitleLabel.setVisible(false);
-        showReport();
-
-        StringBuilder text = new StringBuilder();
-        reportService.getTopScorers(championship).forEach(row ->
-                text.append(row.getPlayer().getName()).append(" ")
-                        .append(row.getPlayer().getLastName())
-                        .append(" - ")
-                        .append(row.getTeam().getName())
-                        .append(" - Goals: ")
-                        .append(row.getGoals())
-                        .append(" - Penalty goals: ")
-                        .append(row.getPenaltyGoals())
-                        .append("\n")
-        );
-        reportArea.setText(text.toString());
+        showRanking("Top Scorers", reportService.getTopScorers(championship),
+                rankingColumn("Player", row -> row.getPlayer().getName() + " " + row.getPlayer().getLastName()),
+                rankingColumn("Team", row -> row.getTeam().getName()),
+                rankingColumn("Goals", TournamentReportService.TopScorerRow::getGoals),
+                rankingColumn("Penalty goals", TournamentReportService.TopScorerRow::getPenaltyGoals));
     }
 
     @FXML
     private void handleParticipation() {
-        phaseLabel.setText("Participation Ranking");
-        zoneTitleLabel.setVisible(false);
-        showReport();
-
-        StringBuilder text = new StringBuilder();
-        reportService.getParticipation(championship).forEach(row ->
-                text.append(row.getPlayer().getName()).append(" ")
-                        .append(row.getPlayer().getLastName())
-                        .append(" - ")
-                        .append(row.getTeam().getName())
-                        .append(" - Matches: ")
-                        .append(row.getMatches())
-                        .append(" - Minutes: ")
-                        .append(row.getMinutes())
-                        .append("\n")
-        );
-        reportArea.setText(text.toString());
+        showRanking("Participation Ranking", reportService.getParticipation(championship),
+                rankingColumn("Player", row -> row.getPlayer().getName() + " " + row.getPlayer().getLastName()),
+                rankingColumn("Team", row -> row.getTeam().getName()),
+                rankingColumn("Matches", TournamentReportService.ParticipationRow::getMatches),
+                rankingColumn("Minutes", TournamentReportService.ParticipationRow::getMinutes));
     }
 
     @FXML
     private void handleFairPlay() {
-        phaseLabel.setText("Fair Play");
-        zoneTitleLabel.setVisible(false);
-        showReport();
+        showRanking("Fair Play", reportService.getFairPlay(championship),
+                rankingColumn("Team", row -> row.getTeam().getName()),
+                rankingColumn("Yellow cards", TournamentReportService.FairPlayRow::getYellow),
+                rankingColumn("Red cards", TournamentReportService.FairPlayRow::getRed),
+                rankingColumn("Points", TournamentReportService.FairPlayRow::getPoints));
+    }
 
-        StringBuilder text = new StringBuilder();
-        reportService.getFairPlay(championship).forEach(row ->
-                text.append(row.getTeam().getName())
-                        .append(" - Yellow: ")
-                        .append(row.getYellow())
-                        .append(" - Red: ")
-                        .append(row.getRed())
-                        .append(" - Points: ")
-                        .append(row.getPoints())
-                        .append("\n")
-        );
-        reportArea.setText(text.toString());
+    private <T, V> TableColumn<T, V> rankingColumn(String title,
+            java.util.function.Function<T, V> value) {
+        TableColumn<T, V> column = new TableColumn<>(title);
+        column.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(value.apply(cell.getValue())));
+        column.setMinWidth(100);
+        column.setPrefWidth(180);
+        return column;
+    }
+
+    @SafeVarargs
+    private final <T> void showRanking(String title, List<T> rows, TableColumn<T, ?>... columns) {
+        showPanels(false, false, false);
+        phaseLabel.setText(title);
+        zoneTitleLabel.setVisible(false);
+        TableView<T> table = new TableView<>();
+        table.getItems().setAll(rows);
+        for (TableColumn<T, ?> column : columns) table.getColumns().add(column);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.getStyleClass().add("ranking-table");
+        table.setPlaceholder(new Label("No results yet. Simulate matches to see the ranking."));
+        Label summary = new Label(rows.size() + " entries  |  Click a column heading to sort");
+        summary.getStyleClass().add("ranking-summary");
+        VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
+        rankingPanel.getChildren().setAll(summary, table);
+        setPanelVisible(rankingPanel, true);
     }
 
     @FXML
@@ -426,9 +406,11 @@ public class TournamentController {
                     .append(String.format("%.2f", row.getPlayer().getAverageRating()))
                     .append("\nSuspended for next match: ")
                     .append(row.getPlayer().isSuspended() ? "Yes" : "No")
-                    .append("\nCharacteristics: ")
-                    .append(new java.util.TreeMap<>(row.getPlayer().getCharacteristics()))
-                    .append("\nMatches: ")
+                    .append("\n\nCHARACTERISTICS\n")
+                    .append(Core.report.PlayerAttributeFormatter.format(row.getPlayer().getCharacteristics()))
+                    .append("\n\nIMPORTED STATISTICS (SOURCE DATA)\n")
+                    .append(Core.report.PlayerAttributeFormatter.format(row.getPlayer().getStatistics()))
+                    .append("\n\nCURRENT TOURNAMENT STATISTICS\nMatches: ")
                     .append(row.getMatches())
                     .append(" - Minutes: ")
                     .append(row.getMinutes())
@@ -605,13 +587,13 @@ public class TournamentController {
 
     @FXML
     private void handleBack() {
-        saveTournament();
+        if (!saveTournament()) return;
 
         try {
             Parent view = FXMLLoader.load(
                     getClass().getResource("/MainMenu.fxml")
             );
-            tournamentPane.getChildren().setAll(view);
+            tournamentPane.getScene().setRoot(view);
         } catch (IOException | IllegalStateException e) {
             e.printStackTrace();
         }
@@ -622,51 +604,29 @@ public class TournamentController {
     }
 
     private void showGroupTable() {
-        setPlayerFilterVisible(false);
-
-        standingsTable.setVisible(true);
-        standingsTable.setManaged(true);
-
-        reportArea.setVisible(false);
-        reportArea.setManaged(false);
-
-        knockoutBracket.setVisible(false);
-        knockoutBracket.setManaged(false);
-
-        matchdayResultsArea.setVisible(true);
-        matchdayResultsArea.setManaged(true);
+        showPanels(true, false, false);
     }
 
     private void showReport() {
-        setPlayerFilterVisible(false);
-
-        standingsTable.setVisible(false);
-        standingsTable.setManaged(false);
-
-        reportArea.setVisible(true);
-        reportArea.setManaged(true);
-
-        knockoutBracket.setVisible(false);
-        knockoutBracket.setManaged(false);
-
-        matchdayResultsArea.setVisible(false);
-        matchdayResultsArea.setManaged(false);
+        showPanels(false, true, false);
     }
 
     private void showKnockoutBracket(boolean visible) {
+        showPanels(false, false, visible);
+    }
+
+    private void showPanels(boolean groups, boolean report, boolean knockout) {
+        setPanelVisible(rankingPanel, false);
         setPlayerFilterVisible(false);
+        setPanelVisible(standingsTable, groups);
+        setPanelVisible(matchdayResultsArea, groups);
+        setPanelVisible(reportArea, report);
+        setPanelVisible(knockoutScroll, knockout);
+    }
 
-        standingsTable.setVisible(false);
-        standingsTable.setManaged(false);
-
-        reportArea.setVisible(false);
-        reportArea.setManaged(false);
-
-        knockoutBracket.setVisible(visible);
-        knockoutBracket.setManaged(visible);
-
-        matchdayResultsArea.setVisible(false);
-        matchdayResultsArea.setManaged(false);
+    private void setPanelVisible(javafx.scene.Node panel, boolean visible) {
+        panel.setVisible(visible);
+        panel.setManaged(visible);
     }
 
     private void showZone(int zoneIndex) {
@@ -759,8 +719,8 @@ public class TournamentController {
 
         addSeriesCards(quarterColumn, firstLegs, secondLegs, 0, 4);
         addSeriesCards(semiColumn, firstLegs, secondLegs, 4, 2);
-        addConnectors(quarterConnectorColumn, 4);
-        addConnectors(semiConnectorColumn, 2);
+        addConnectors(quarterConnectorColumn, 2);
+        addConnectors(semiConnectorColumn, 1);
 
         championship.getMatches().stream()
                 .map(Match::asFinal)
@@ -784,6 +744,8 @@ public class TournamentController {
         for (int i = 0; i < count; i++) {
             Label arrow = new Label("›");
             arrow.getStyleClass().add("bracket-arrow");
+            arrow.setMaxHeight(Double.MAX_VALUE);
+            VBox.setVgrow(arrow, javafx.scene.layout.Priority.ALWAYS);
             column.getChildren().add(arrow);
         }
     }
@@ -810,7 +772,7 @@ public class TournamentController {
             Parent view = loader.load();
             VenuesController controller = loader.getController();
             controller.setTournament(championship, tournamentName);
-            tournamentPane.getChildren().setAll(view);
+            tournamentPane.getScene().setRoot(view);
         } catch (IOException | IllegalStateException exception) {
             showError("The cities and stadiums screen could not be opened: "
                     + exception.getMessage());
@@ -820,11 +782,13 @@ public class TournamentController {
     private VBox createPendingSeriesCard(FirstLegMatch first, SecondLegMatch second) {
         VBox card = new VBox(3);
         card.getStyleClass().add("match-card");
-        card.getChildren().add(new Label(first.getHomeTeam().getName()
-                + " vs " + first.getAwayTeam().getName()));
+        Label teams = new Label(first.getHomeTeam().getName()
+                + " vs " + first.getAwayTeam().getName());
+        teams.setWrapText(true);
+        card.getChildren().add(teams);
         if (first.isPlayed()) {
             card.getChildren().add(new Label("First leg: " + first.getHomeGoals()
-                    + " - " + first.getAwayGoals()));
+                    + " - " + first.getAwayGoals() + (first.isForfeit() ? " (administrative)" : "")));
         } else {
             card.getChildren().add(new Label("First leg pending"));
         }
@@ -898,7 +862,7 @@ public class TournamentController {
         winnerLabel.setMaxWidth(Double.MAX_VALUE);
         winnerLabel.setAlignment(javafx.geometry.Pos.CENTER);
         card.getChildren().add(winnerLabel);
-        card.getChildren().add(new Label("Click to view incidents"));
+        card.getChildren().add(new Label(displayMatch.isForfeit() ? "Administrative result - details" : "Click to view incidents"));
         card.setOnMouseClicked(event -> showMatchDetails(matches));
         return card;
     }
@@ -921,6 +885,7 @@ public class TournamentController {
             }
         });
         TextArea timeline = new TextArea();
+        timeline.getStyleClass().add("report-area");
         timeline.setEditable(false);
         timeline.setWrapText(true);
         timeline.setPrefSize(720, 480);
@@ -941,6 +906,9 @@ public class TournamentController {
             alert.initOwner(tournamentPane.getScene().getWindow());
         }
         alert.getDialogPane().setContent(content);
+        alert.getDialogPane().getStylesheets().add(
+                Objects.requireNonNull(getClass().getResource("/style.css")).toExternalForm());
+        alert.getDialogPane().getStyleClass().add("match-dialog");
         alert.showAndWait();
     }
 
@@ -1044,12 +1012,17 @@ public class TournamentController {
     }
 
     private void handleWindowClose(WindowEvent event) {
-        saveTournament();
+        if (!saveTournament()) event.consume();
     }
 
-    private void saveTournament() {
-        if (championship != null) {
-            repository.save(championship);
+    private boolean saveTournament() {
+        try {
+            if (championship != null) repository.save(championship);
+            return true;
+        } catch (IllegalStateException exception) {
+            showError(exception.getMessage()
+                    + "\nYour latest changes are still in memory. Keep this window open and retry after fixing the save location.");
+            return false;
         }
     }
 

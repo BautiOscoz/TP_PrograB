@@ -209,15 +209,15 @@ public class VenuesController {
 
     @FXML
     private void handleBack() {
-        championshipRepository.save(championship);
         try {
+            championshipRepository.save(championship);
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/Tournament.fxml"));
             Parent view = loader.load();
             TournamentController controller = loader.getController();
             controller.setTournament(championship, tournamentName);
-            rootPane.getChildren().setAll(view);
+            rootPane.getScene().setRoot(view);
         } catch (IOException | IllegalStateException exception) {
-            showError("The tournament screen could not be opened.");
+            showError(exception.getMessage());
         }
     }
 

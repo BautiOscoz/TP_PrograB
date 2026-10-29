@@ -193,6 +193,7 @@ public class Championship implements Serializable {
                 .filter(match -> !match.isPlayed())
                 .forEach(match -> {
                     matchSimulator.simulate(match);
+                    if (!match.isPlayed()) shiftFixturesAfterPostponement(match);
                     afterEachMatch.accept(match);
                 });
         if (!hasPendingGroupMatchdays()) {
@@ -203,6 +204,17 @@ public class Championship implements Serializable {
     public List<TeamStanding> getStandings(TournamentZone zone) {
         StandingsCalculator calculator = new StandingsCalculator();
         return calculator.calculate(zone, matches);
+    }
+
+    private void shiftFixturesAfterPostponement(Match postponed) {
+        // Keep later rounds after the replay instead of putting two dates on the same day.
+        for (Match fixture : matches) {
+            if (fixture == postponed || fixture.isPlayed()) continue;
+            boolean later = postponed.isGroupStage()
+                    ? !fixture.isGroupStage() || fixture.getMatchday() > postponed.getMatchday()
+                    : matches.indexOf(fixture) > matches.indexOf(postponed);
+            if (later) fixture.setMatchDate(fixture.getMatchDate().plusDays(1));
+        }
     }
 
     public void loadVenues(List<City> cities, List<Stadium> stadiums) {
@@ -374,35 +386,6 @@ public class Championship implements Serializable {
         );
     }
 
-    private Team simulateSeries(
-            Team firstTeam,
-            Team secondTeam,
-            LocalDate firstLegDate
-    ) {
-        FirstLegMatch firstLeg = new FirstLegMatch(
-                firstLegDate,
-                firstTeam,
-                secondTeam,
-                chooseEligibleReferee(firstTeam, secondTeam)
-        );
-
-        matches.add(firstLeg);
-        matchSimulator.simulate(firstLeg);
-
-        SecondLegMatch secondLeg = new SecondLegMatch(
-                firstLegDate.plusDays(7),
-                secondTeam,
-                firstTeam,
-                chooseEligibleReferee(secondTeam, firstTeam),
-                firstLeg.getHomeGoals(),
-                firstLeg.getAwayGoals()
-        );
-
-        matches.add(secondLeg);
-        matchSimulator.simulate(secondLeg);
-
-        return determineSeriesWinner(firstLeg, secondLeg);
-    }
 
     private int getMatchPoints(
             int goalsFor,
@@ -607,6 +590,7 @@ public class Championship implements Serializable {
     private Team determinePenaltyShootoutWinner(
             Match match
     ) {
+        matchSimulator.prepareAdministrativeShootout(match);
         Team homeTeam = match.getHomeTeam();
         Team awayTeam = match.getAwayTeam();
 
@@ -822,6 +806,10 @@ public class Championship implements Serializable {
         next.setStadium(selectedStadium);
 
         matchSimulator.simulate(next);
+        if (!next.isPlayed()) {
+            shiftFixturesAfterPostponement(next);
+            return next;
+        }
         if (requiresPenaltyShootout(next)) {
             pendingPenaltyShootout = next;
         } else {
@@ -860,6 +848,7 @@ public class Championship implements Serializable {
 
     private Match simulatePendingPenaltyShootout() {
         Match match = pendingPenaltyShootout;
+        matchSimulator.prepareAdministrativeShootout(match);
 
         SecondLegMatch secondLeg = match.asSecondLeg();
         if (secondLeg != null) {
@@ -894,6 +883,9 @@ public class Championship implements Serializable {
     }
 
     public String getKnockoutDecisionCriterion(Match match) {
+        if (!match.isPlayed() && match.getPostponements() > 0) {
+            return "Postponed: both teams lacked players. Previous suspensions served. New date: " + match.getMatchDate();
+        }
         if (isPendingPenaltyShootout(match)) {
             return "Tie: penalty shootout pending";
         }
@@ -914,6 +906,7 @@ public class Championship implements Serializable {
         }
 
         if (match.asFinal() != null) {
+            if (match.isForfeit()) return match.getAdministrativeReason();
             return "Winner decided by the 90-minute result";
         }
         return "First leg: the series continues";
@@ -964,7 +957,7 @@ public class Championship implements Serializable {
             List<SecondLegMatch> second = secondLegs();
             if (first.size() == 4 && first.stream().allMatch(Match::isPlayed)
                     && second.isEmpty()) {
-                scheduleSecondLegs(first, first.get(0).getMatchDate().plusDays(7));
+                scheduleSecondLegs(first, latestDate(first).plusDays(7));
             }
             if (second.size() == 4 && second.stream().allMatch(Match::isPlayed)) {
                 quarterFinalWinners.clear();
@@ -972,7 +965,7 @@ public class Championship implements Serializable {
                     quarterFinalWinners.add(determineSeriesWinner(first.get(i), second.get(i)));
                 }
                 stage = TournamentStage.SEMI_FINALS;
-                scheduleSemiFinals(second.get(0).getMatchDate().plusDays(7));
+                scheduleSemiFinals(latestDate(second).plusDays(7));
             }
             return;
         }
@@ -982,7 +975,7 @@ public class Championship implements Serializable {
             List<SecondLegMatch> second = secondLegs();
             if (first.size() == 6 && first.subList(4, 6).stream().allMatch(Match::isPlayed)
                     && second.size() == 4) {
-                scheduleSecondLegs(first.subList(4, 6), first.get(4).getMatchDate().plusDays(7));
+                scheduleSecondLegs(first.subList(4, 6), latestDate(first.subList(4, 6)).plusDays(7));
             }
             if (second.size() == 6 && second.subList(4, 6).stream().allMatch(Match::isPlayed)) {
                 finalists.clear();
@@ -990,7 +983,7 @@ public class Championship implements Serializable {
                     finalists.add(determineSeriesWinner(first.get(i + 4), second.get(i + 4)));
                 }
                 stage = TournamentStage.FINAL;
-                scheduleFinal(second.get(4).getMatchDate().plusDays(7));
+                scheduleFinal(latestDate(second.subList(4, 6)).plusDays(7));
             }
             return;
         }
@@ -1016,6 +1009,10 @@ public class Championship implements Serializable {
                     first.getHomeGoals(), first.getAwayGoals()));
         }
         addKnockoutFixtures(fixtures);
+    }
+
+    private LocalDate latestDate(List<? extends Match> fixtures) {
+        return fixtures.stream().map(Match::getMatchDate).max(LocalDate::compareTo).orElseThrow();
     }
 
     private void scheduleSemiFinals(LocalDate date) {
@@ -1068,8 +1065,7 @@ public class Championship implements Serializable {
         if (stage != TournamentStage.FINAL || !this.finalists.equals(finalists)) {
             throw new IllegalStateException("Decided semi-finals are required first.");
         }
-        simulateNextKnockoutMatch();
-        if (hasPendingPenaltyShootout()) {
+        while (stage == TournamentStage.FINAL) {
             simulateNextKnockoutMatch();
         }
         return champion;

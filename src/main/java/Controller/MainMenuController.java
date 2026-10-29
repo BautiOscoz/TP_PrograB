@@ -20,7 +20,7 @@ public class MainMenuController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/NewTournament.fxml"));
             Parent view = loader.load();
-            rootPane.getChildren().setAll(view);
+            rootPane.getScene().setRoot(view);
         } catch (IOException | IllegalStateException e) {
             e.printStackTrace();
         }
@@ -49,15 +49,10 @@ public class MainMenuController {
             TournamentController controller = loader.getController();
             controller.setTournament(championship, "Loaded Tournament");
 
-            rootPane.getChildren().setAll(view);
+            rootPane.getScene().setRoot(view);
         } catch (IOException | IllegalStateException e) {
             showError("Could not open the tournament.");
         }
-    }
-
-    @FXML
-    private void handleStats(ActionEvent event) {
-        System.out.println("Stats - pending");
     }
 
     @FXML

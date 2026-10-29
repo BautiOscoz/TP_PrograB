@@ -43,13 +43,14 @@ public class TournamentReportService {
 
     public List<ParticipationRow> getParticipation(Championship championship) {
         List<ParticipationRow> rows = new ArrayList<>();
+        List<Match> playedMatches = championship.getPlayedMatches();
 
         for (Team team : championship.getTeams()) {
             for (Player player : team.getPlayers()) {
                 int matches = 0;
                 int minutes = 0;
 
-                for (Match match : championship.getPlayedMatches()) {
+                for (Match match : playedMatches) {
                     MatchParticipation participation =
                             getMatchParticipation(match, player);
 
@@ -85,7 +86,7 @@ public class TournamentReportService {
             Match match,
             Player player
     ) {
-        if (!match.isPlayed()
+        if (!match.isPlayed() || match.isForfeit()
                 || match.getHomeLineup() == null
                 || match.getAwayLineup() == null) {
 
@@ -217,21 +218,29 @@ public class TournamentReportService {
             Position position
     ) {
         List<PlayerStatsRow> rows = new ArrayList<>();
-        List<ParticipationRow> participation = getParticipation(championship);
+        Map<Player, ParticipationRow> participation = new HashMap<>();
+        getParticipation(championship).forEach(row -> participation.put(row.getPlayer(), row));
+        Map<Player, Integer> goalsByPlayer = new HashMap<>();
+        Map<Player, Integer> goalsAgainstByPlayer = new HashMap<>();
+        for (Match match : championship.getPlayedMatches()) {
+            for (Incident incident : match.getIncidents()) {
+                Player scorer = incident.getScoringPlayer();
+                if (scorer != null) goalsByPlayer.merge(scorer, 1, Integer::sum);
+                Player goalkeeper = incident.getGoalkeeper();
+                if (incident.isMatchGoal() && goalkeeper != null) {
+                    goalsAgainstByPlayer.merge(goalkeeper, 1, Integer::sum);
+                }
+            }
+        }
 
         for (Team team : championship.getTeams()) {
             for (Player player : team.getPlayers()) {
 
                 if (position == null || player.getPosition() == position) {
 
-                    ParticipationRow playerParticipation = participation.stream()
-                            .filter(row -> row.getPlayer() == player)
-                            .findFirst()
-                            .orElse(new ParticipationRow(player, team, 0, 0));
-
-                    int goals = countGoals(championship, player);
-                    int goalkeeperGoalsAgainst =
-                            countGoalsAgainst(championship, player);
+                    ParticipationRow playerParticipation = participation.get(player);
+                    int goals = goalsByPlayer.getOrDefault(player, 0);
+                    int goalkeeperGoalsAgainst = goalsAgainstByPlayer.getOrDefault(player, 0);
 
                     rows.add(new PlayerStatsRow(
                             player,
@@ -257,6 +266,7 @@ public class TournamentReportService {
 
         for (Referee referee : championship.getReferees()) {
             long matches = championship.getPlayedMatches().stream()
+                    .filter(match -> !match.isForfeit())
                     .filter(match -> match.getReferee().equals(referee))
                     .count();
             rows.add(new RefereeStatsRow(
@@ -302,54 +312,12 @@ public class TournamentReportService {
         return standing;
     }
 
-    private int getPlayedMinutes(Match match, Player player) {
-        if (!match.isPlayed()) {
-            return 0;
-        }
-
-        if (match.getHomeLineup().getPlayers().contains(player)
-                || match.getAwayLineup().getPlayers().contains(player)) {
-            for (Incident incident : match.getIncidents()) {
-                Player playerOut = incident.getPlayerOut();
-                if (playerOut == player) {
-                    return incident.getMinute();
-                }
-                if (incident.isRedCard() && incident.getAffectedPlayer() == player) {
-                    return incident.getMinute();
-                }
-            }
-            return 90;
-        }
-
-        for (Incident incident : match.getIncidents()) {
-            Player playerIn = incident.getPlayerIn();
-            if (playerIn == player) {
-                return 90 - incident.getMinute();
-            }
-        }
-
-        return 0;
-    }
-
-    private int countGoals(Championship championship, Player player) {
-        return (int) championship.getPlayedMatches().stream()
-                .flatMap(match -> match.getIncidents().stream())
-                .filter(incident -> incident.getScoringPlayer() == player)
-                .count();
-    }
-
-    private int countGoalsAgainst(Championship championship, Player goalkeeper) {
-        return (int) championship.getPlayedMatches().stream()
-                .flatMap(match -> match.getIncidents().stream())
-                .filter(incident -> incident.getGoalkeeper() == goalkeeper && incident.isMatchGoal())
-                .count();
-    }
 
     public double getAverageRefereeExperience(
             Championship championship
     ) {
-        return getRefereeStats(championship).stream()
-                .mapToInt(RefereeStatsRow::getYears)
+        return championship.getReferees().stream()
+                .mapToInt(Referee::getRefereeYears)
                 .average()
                 .orElse(0.0);
     }
