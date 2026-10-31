@@ -18,6 +18,8 @@ public class PenaltyShootout extends Incident implements Serializable {
     }
 
     public Player getPlayer() { return player; }
+    @Override
+    public Player getParticipant() { return player; }
     public boolean isScored() { return scored; }
 
     @Override

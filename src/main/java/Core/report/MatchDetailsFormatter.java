@@ -9,9 +9,7 @@ import java.util.List;
 /** Read-only presentation of recorded matches; never runs the simulation. */
 public class MatchDetailsFormatter {
     public String title(Match match) {
-        String stage = match.isGroupStage() ? "Group matchday " + match.getMatchday()
-                : match.asFirstLeg() != null ? "First leg"
-                : match.asSecondLeg() != null ? "Second leg" : "Final";
+        String stage = match.getStageDescription();
         return match.getMatchDate() + " | " + stage + " | "
                 + match.getHomeTeam().getName() + " " + match.getHomeGoals()
                 + " - " + match.getAwayGoals() + " " + match.getAwayTeam().getName();
@@ -62,7 +60,7 @@ public class MatchDetailsFormatter {
                 .sorted(Comparator.comparingInt(Incident::getMinute)).toList();
         if (incidents.isEmpty()) text.append("No incidents recorded.\n");
         for (Incident incident : incidents) {
-            text.append(incident.getMinute()).append("' ").append(incident.getDescription());
+            text.append(incident.getMinute()).append("' ").append(IncidentFormatter.describe(match, incident));
             if (incident.isMatchGoal()) {
                 text.append(" | Goalkeeper: ").append(name(incident.getGoalkeeper()));
             }

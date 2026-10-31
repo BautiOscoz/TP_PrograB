@@ -37,7 +37,7 @@ public class MatchConsoleReporter {
             System.out.println("No incidents recorded.");
         } else {
             timeline.forEach(incident ->
-                    System.out.println(formatIncident(incident))
+                    System.out.println(formatIncident(match, incident))
             );
         }
 
@@ -48,8 +48,8 @@ public class MatchConsoleReporter {
         System.out.println("============================================================");
     }
 
-    private String formatIncident(Incident incident) {
-        return String.format("%2d'  %s", incident.getMinute(), incident.getDescription());
+    private String formatIncident(Match match, Incident incident) {
+        return String.format("%2d'  %s", incident.getMinute(), Core.report.IncidentFormatter.describe(match, incident));
     }
 
     private String fullName(Core.domain.Person person) {

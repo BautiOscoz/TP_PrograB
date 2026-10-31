@@ -47,6 +47,29 @@ public class PlayerReportsTest {
             require(rows.size() == expected && rows.stream()
                     .allMatch(r -> r.getPlayer().getPosition() == position), "Position filter");
         }
+        for (var row : reports.getFairPlay(tournament)) {
+            int yellow = 0, red = 0, points = 0;
+            for (Match match : tournament.getPlayedMatches()) {
+                for (Incident incident : match.getIncidents()) {
+                    if (row.getTeam().getPlayers().contains(incident.getAffectedPlayer())) {
+                        yellow += incident.isYellowCard() ? 1 : 0;
+                        red += incident.isRedCard() ? 1 : 0;
+                        points += incident.getFairPlayPoints();
+                    }
+                }
+            }
+            require(row.getYellow() == yellow && row.getRed() == red && row.getPoints() == points,
+                    "Indexed fair play matches independent totals");
+        }
+        for (var row : reports.getTopScorers(tournament)) {
+            require(row.getTeam().getPlayers().contains(row.getPlayer()), "Scorer team index");
+        }
+        for (var row : reports.getParticipation(tournament)) {
+            var stats = reports.getPlayerStats(tournament).stream()
+                    .filter(r -> r.getPlayer() == row.getPlayer()).findFirst().orElseThrow();
+            require(row.getMatches() == stats.getMatches() && row.getMinutes() == stats.getMinutes(),
+                    "Participation and player reports agree");
+        }
         double expectedAverage = tournament.getReferees().stream()
                 .mapToInt(r -> r.getRefereeYears()).average().orElse(0);
         require(reports.getAverageRefereeExperience(tournament) == expectedAverage, "Referee average");

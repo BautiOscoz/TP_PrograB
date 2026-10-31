@@ -21,6 +21,9 @@ public class GroupMatch extends Match implements Serializable {
     }
 
     @Override
+    public String getStageDescription() { return "Group matchday " + matchday; }
+
+    @Override
     public int getMatchday() {
         return matchday;
     }

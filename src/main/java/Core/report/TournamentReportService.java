@@ -2,6 +2,7 @@ package Core.report;
 
 import Core.Run.Championship;
 import Core.domain.Match;
+import Core.domain.ParticipationTimeline;
 import Core.domain.Player;
 import Core.domain.Referee;
 import Core.domain.Team;
@@ -21,6 +22,7 @@ public class TournamentReportService {
 
     public List<TopScorerRow> getTopScorers(Championship championship) {
         Map<Player, TopScorerRow> rows = new HashMap<>();
+        Map<Player, Team> teams = indexTeams(championship);
 
         for (Match match : championship.getPlayedMatches()) {
             for (Incident incident : match.getIncidents()) {
@@ -28,7 +30,7 @@ public class TournamentReportService {
                 if (scorer != null) {
                     TopScorerRow row = rows.computeIfAbsent(
                             scorer,
-                            player -> new TopScorerRow(player, getTeam(championship, player), 0, 0)
+                            player -> new TopScorerRow(player, teams.get(player), 0, 0)
                     );
                     row.addGoal(incident.isPenaltyGoal());
                 }
@@ -43,29 +45,11 @@ public class TournamentReportService {
 
     public List<ParticipationRow> getParticipation(Championship championship) {
         List<ParticipationRow> rows = new ArrayList<>();
-        List<Match> playedMatches = championship.getPlayedMatches();
-
+        Map<Player, PlayerTotals> totals = collectPlayerTotals(championship);
         for (Team team : championship.getTeams()) {
             for (Player player : team.getPlayers()) {
-                int matches = 0;
-                int minutes = 0;
-
-                for (Match match : playedMatches) {
-                    MatchParticipation participation =
-                            getMatchParticipation(match, player);
-
-                    if (participation.played()) {
-                        matches++;
-                        minutes += participation.minutes();
-                    }
-                }
-
-                rows.add(new ParticipationRow(
-                        player,
-                        team,
-                        matches,
-                        minutes
-                ));
+                PlayerTotals total = totals.get(player);
+                rows.add(new ParticipationRow(player, team, total.matches, total.minutes));
             }
         }
 
@@ -79,88 +63,61 @@ public class TournamentReportService {
                 .toList();
     }
 
-    private record MatchParticipation(boolean played, int minutes) {
+    /** Local to one report request: never cached or serialized. */
+    private static class PlayerTotals {
+        int matches;
+        int minutes;
+        int goals;
+        int goalsAgainst;
     }
 
-    private MatchParticipation getMatchParticipation(
-            Match match,
-            Player player
-    ) {
-        if (!match.isPlayed() || match.isForfeit()
-                || match.getHomeLineup() == null
-                || match.getAwayLineup() == null) {
-
-            return new MatchParticipation(false, 0);
-        }
-
-        // Esta versión del simulador juega partidos de 90 minutos.
-        // La tanda de penales no agrega minutos jugados.
-        final int duration = 90;
-
-        boolean starter =
-                match.getHomeLineup().getPlayers().contains(player)
-                        || match.getAwayLineup().getPlayers().contains(player);
-
-        int entryMinute = starter ? 0 : -1;
-
-        // Match.addIncident() mantiene las incidencias ordenadas por minuto.
-        for (Incident incident : match.getIncidents()) {
-            int minute = incident.getMinute();
-
-            if (incident.isShootoutPenalty()
-                    || minute < 0
-                    || minute > duration) {
-                continue;
+    private Map<Player, PlayerTotals> collectPlayerTotals(Championship championship) {
+        Map<Player, PlayerTotals> totals = new HashMap<>();
+        championship.getTeams().forEach(team -> team.getPlayers()
+                .forEach(player -> totals.put(player, new PlayerTotals())));
+        for (Match match : championship.getPlayedMatches()) {
+            boolean countMinutes = !match.isForfeit() && match.getHomeLineup() != null
+                    && match.getAwayLineup() != null;
+            ParticipationTimeline timeline = new ParticipationTimeline(
+                    countMinutes ? match.getHomeLineup().getPlayers() : List.of(),
+                    countMinutes ? match.getAwayLineup().getPlayers() : List.of());
+            for (Incident incident : match.getIncidents()) {
+                PlayerTotals scorer = totals.get(incident.getScoringPlayer());
+                if (scorer != null) scorer.goals++;
+                PlayerTotals keeper = totals.get(incident.getGoalkeeper());
+                if (incident.isMatchGoal() && keeper != null) keeper.goalsAgainst++;
+                if (countMinutes) incident.applyToParticipation(timeline);
             }
-
-            if (entryMinute == -1
-                    && incident.getPlayerIn() == player) {
-                entryMinute = minute;
-            }
-
-            boolean substitutedOut = incident.getPlayerOut() == player;
-
-            boolean sentOff = incident.isRedCard()
-                    && incident.getAffectedPlayer() == player;
-
-            if (entryMinute >= 0 && (substitutedOut || sentOff)) {
-                return new MatchParticipation(
-                        true,
-                        Math.max(0, minute - entryMinute)
-                );
-            }
+            timeline.minutesPlayed().forEach((player, minutes) -> {
+                PlayerTotals total = totals.get(player);
+                if (total != null) {
+                    total.matches++;
+                    total.minutes += minutes;
+                }
+            });
         }
-
-        if (entryMinute == -1) {
-            // No fue titular y tampoco ingresó.
-            return new MatchParticipation(false, 0);
-        }
-
-        // Ingresar a los 90 cuenta como participación,
-        // aunque sume cero minutos enteros.
-        return new MatchParticipation(true, duration - entryMinute);
+        return totals;
     }
 
     public List<FairPlayRow> getFairPlay(Championship championship) {
         List<FairPlayRow> rows = new ArrayList<>();
 
-        for (Team team : championship.getTeams()) {
-            int yellow = 0;
-            int red = 0;
-            int points = 0;
-
-            for (Match match : championship.getPlayedMatches()) {
-                for (Incident incident : match.getIncidents()) {
-                    Player player = incident.getAffectedPlayer();
-                    if (player != null && team.getPlayers().contains(player)) {
-                        points += incident.getFairPlayPoints();
-                        yellow += incident.isYellowCard() ? 1 : 0;
-                        red += incident.isRedCard() ? 1 : 0;
-                    }
+        Map<Player, Team> teams = indexTeams(championship);
+        Map<Team, int[]> counts = new HashMap<>();
+        championship.getTeams().forEach(team -> counts.put(team, new int[3]));
+        for (Match match : championship.getPlayedMatches()) {
+            for (Incident incident : match.getIncidents()) {
+                int[] count = counts.get(teams.get(incident.getAffectedPlayer()));
+                if (count != null) {
+                    count[0] += incident.isYellowCard() ? 1 : 0;
+                    count[1] += incident.isRedCard() ? 1 : 0;
+                    count[2] += incident.getFairPlayPoints();
                 }
             }
-
-            rows.add(new FairPlayRow(team, yellow, red, points));
+        }
+        for (Team team : championship.getTeams()) {
+            int[] count = counts.get(team);
+            rows.add(new FairPlayRow(team, count[0], count[1], count[2]));
         }
 
         return rows.stream()
@@ -218,38 +175,23 @@ public class TournamentReportService {
             Position position
     ) {
         List<PlayerStatsRow> rows = new ArrayList<>();
-        Map<Player, ParticipationRow> participation = new HashMap<>();
-        getParticipation(championship).forEach(row -> participation.put(row.getPlayer(), row));
-        Map<Player, Integer> goalsByPlayer = new HashMap<>();
-        Map<Player, Integer> goalsAgainstByPlayer = new HashMap<>();
-        for (Match match : championship.getPlayedMatches()) {
-            for (Incident incident : match.getIncidents()) {
-                Player scorer = incident.getScoringPlayer();
-                if (scorer != null) goalsByPlayer.merge(scorer, 1, Integer::sum);
-                Player goalkeeper = incident.getGoalkeeper();
-                if (incident.isMatchGoal() && goalkeeper != null) {
-                    goalsAgainstByPlayer.merge(goalkeeper, 1, Integer::sum);
-                }
-            }
-        }
+        Map<Player, PlayerTotals> totals = collectPlayerTotals(championship);
 
         for (Team team : championship.getTeams()) {
             for (Player player : team.getPlayers()) {
 
                 if (position == null || player.getPosition() == position) {
 
-                    ParticipationRow playerParticipation = participation.get(player);
-                    int goals = goalsByPlayer.getOrDefault(player, 0);
-                    int goalkeeperGoalsAgainst = goalsAgainstByPlayer.getOrDefault(player, 0);
+                    PlayerTotals total = totals.get(player);
 
                     rows.add(new PlayerStatsRow(
                             player,
                             team,
                             player.getPosition().name(),
-                            playerParticipation.getMatches(),
-                            playerParticipation.getMinutes(),
-                            goals,
-                            goalkeeperGoalsAgainst
+                            total.matches,
+                            total.minutes,
+                            total.goals,
+                            total.goalsAgainst
                     ));
                 }
             }
@@ -282,11 +224,11 @@ public class TournamentReportService {
                 .toList();
     }
 
-    private Team getTeam(Championship championship, Player player) {
-        return championship.getTeams().stream()
-                .filter(team -> team.getPlayers().contains(player))
-                .findFirst()
-                .orElseThrow();
+    private Map<Player, Team> indexTeams(Championship championship) {
+        Map<Player, Team> teams = new HashMap<>();
+        championship.getTeams().forEach(team -> team.getPlayers()
+                .forEach(player -> teams.putIfAbsent(player, team)));
+        return teams;
     }
 
     private TeamStanding getOverallStanding(

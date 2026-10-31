@@ -1,6 +1,9 @@
 package Core.incidents;
 
 import Core.domain.Player;
+import Core.domain.Team;
+import Core.domain.ParticipationTimeline;
+import java.util.List;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -16,6 +19,18 @@ public class RedCard extends Incident implements Serializable {
     }
 
     public Player getPenalizedPlayer() { return penalizedPlayer; }
+
+    @Override
+    public void applyToParticipation(ParticipationTimeline timeline) {
+        timeline.leave(penalizedPlayer, getMinute());
+    }
+
+    @Override
+    public void applyToLineup(Team team, List<Player> playersOnField) {
+        if (team.getPlayers().contains(penalizedPlayer)) {
+            playersOnField.remove(penalizedPlayer);
+        }
+    }
 
     @Override
     public String getDescription() {

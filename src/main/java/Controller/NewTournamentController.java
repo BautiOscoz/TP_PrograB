@@ -1,11 +1,8 @@
 package Controller;
 
 import Core.Run.Championship;
-import Core.domain.City;
-import Core.domain.Stadium;
 import Core.persistance.ChampionshipRepository;
-import Infrastructure.database.CityRepository;
-import Infrastructure.database.StadiumRepository;
+import Infrastructure.database.DatabaseVenueLoader;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -15,8 +12,6 @@ import javafx.event.ActionEvent;
 import javafx.scene.layout.AnchorPane;
 
 import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
 
 
 public class NewTournamentController {
@@ -47,12 +42,9 @@ public class NewTournamentController {
 
     private void loadVenues(Championship championship) {
         try {
-            List<City> cities = new CityRepository().findAll(
-                    championship.getCountries()
-            );
-            List<Stadium> stadiums = new StadiumRepository().findAll(cities);
-            championship.loadVenues(cities, stadiums);
-        } catch (SQLException | IllegalArgumentException | IllegalStateException exception) {
+            var venues = new DatabaseVenueLoader().load(championship.getCountries());
+            championship.loadVenues(venues.cities(), venues.stadiums());
+        } catch (IllegalArgumentException | IllegalStateException exception) {
             showWarning(
                     "The tournament was created, but cities and stadiums could not be loaded: "
                             + exception.getMessage()

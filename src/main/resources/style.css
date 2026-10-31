@@ -408,6 +408,17 @@
     -fx-padding: 5px 9px;
 }
 .ranking-table .table-row-cell { -fx-cell-size: 38px; }
+.content-area .standings-table .table-cell {
+    -fx-alignment: CENTER;
+    -fx-padding: 5px 3px;
+}
+.content-area .standings-table .team-column {
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 5px 12px;
+}
+.content-area .standings-table .team-column .label {
+    -fx-alignment: CENTER_LEFT;
+}
 .ranking-table .table-row-cell:selected, .content-area .standings-table .table-row-cell:selected {
     -fx-background-color: #36577a;
 }

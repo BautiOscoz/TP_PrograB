@@ -56,10 +56,7 @@ public class MatchSimulator {
         FormationType awayTactics = chooseRandomFormation(match.getAwayTeam());
 
         if (homeTactics == null && awayTactics == null) {
-            if (unavailableHomePlayers.isEmpty() && unavailableAwayPlayers.isEmpty()) {
-                throw new IllegalStateException("Neither team can field a lineup, even without suspensions. Correct the squads before continuing.");
-            }
-            match.postponeForUnavailableTeams();
+            match.awardRandomForfeit(random.nextBoolean());
             serveSuspensions(unavailableHomePlayers, unavailableAwayPlayers);
             return;
         }
@@ -83,15 +80,12 @@ public class MatchSimulator {
         int homeGoals = sampleGoals(1.25 + (homeStrength - awayStrength + surprise) / 35.0);
         int awayGoals = sampleGoals(1.10 + (awayStrength - homeStrength - surprise) / 35.0);
 
-        match.setHomeGoals(homeGoals);
-        match.setAwayGoals(awayGoals);
-
         addTeamIncidents(match, match.getHomeTeam(), homeLineup, unavailableHomePlayers);
         addTeamIncidents(match, match.getAwayTeam(), awayLineup, unavailableAwayPlayers);
         addGoals(match, homeGoals, match.getHomeTeam(), match.getAwayTeam());
         addGoals(match, awayGoals, match.getAwayTeam(), match.getHomeTeam());
 
-        match.setPlayed(true);
+        match.complete(homeGoals, awayGoals);
     }
 
     private void serveSuspensions(Set<Player> home, Set<Player> away) {

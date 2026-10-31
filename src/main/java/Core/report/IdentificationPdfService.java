@@ -120,6 +120,16 @@ public class IdentificationPdfService {
         }
         missing.add(person.getName() + " " + person.getLastName()
                 + " - missing or unreadable photo: " + person.getDocumentNumber() + ".jpg/.png");
+        // Keep the same illustration for a participant across exports.
+        int avatar = Math.floorMod(person.getDocumentNumber(), 4) + 1;
+        var resource = IdentificationPdfService.class.getResource("/images/avatars/avatar-" + avatar + ".png");
+        if (resource != null) {
+            try {
+                return Image.getInstance(resource);
+            } catch (IOException | RuntimeException exception) {
+                // Preserve the text placeholder if the bundled illustration cannot be read.
+            }
+        }
         return null;
     }
 }

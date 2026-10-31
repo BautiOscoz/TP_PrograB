@@ -11,6 +11,7 @@ import java.io.ObjectOutputStream;
 public class StagedSimulationTest {
     public static void main(String[] args) throws Exception {
         Championship tournament = new Championship("torneo.json", 2026L);
+        useTestVenues(tournament);
         check(tournament.getStage() == TournamentStage.GROUP_STAGE, "New tournament stage");
         check(tournament.getMatches().size() == 24, "Only group fixtures at creation");
 
@@ -32,6 +33,13 @@ public class StagedSimulationTest {
             check(tournament.getPlayedMatches().size() == previouslyPlayed + 1,
                     "Exactly one knockout match per call");
 
+            if (tournament.hasPendingPenaltyShootout()) {
+                tournament = roundTrip(tournament);
+                int count = tournament.getPlayedMatches().size();
+                Match pending = tournament.getPendingPenaltyShootout();
+                check(tournament.simulateNextKnockoutMatch() == pending, "Second step resolves the pending shootout");
+                check(tournament.getPlayedMatches().size() == count, "Shootout does not add a match");
+            }
             if (matchNumber == 4) {
                 check(tournament.getMatches().size() == 32, "Four second legs scheduled");
             } else if (matchNumber == 8) {
@@ -51,6 +59,15 @@ public class StagedSimulationTest {
         check(tournament.getChampion() != null, "Champion persisted");
         check(tournament.getMatches().size() == 37, "37 unique fixtures in a full tournament");
         check(tournament.getPlayedMatches().size() == 37, "All fixtures played");
+        check(tournament.getPlayedMatches().stream().filter(m -> !m.isGroupStage())
+                .map(m -> m.getStadium().getId()).distinct().count() == 13, "Every knockout fixture uses a different stadium");
+        for (Match match : tournament.getMatches()) {
+            check(Championship.isRefereeEligible(match.getReferee(), match.getHomeTeam(), match.getAwayTeam()),
+                    "Scheduled referee respects nationality rule");
+            int incidents = match.getIncidents().size();
+            new Core.report.MatchDetailsFormatter().format(tournament, match);
+            check(match.getIncidents().size() == incidents, "Reading reports does not simulate penalties");
+        }
         boolean refusedReplay = false;
         try {
             tournament.simulateNextKnockoutMatch();
@@ -69,8 +86,17 @@ public class StagedSimulationTest {
         }
         try (ObjectInputStream input = new ObjectInputStream(
                 new ByteArrayInputStream(bytes.toByteArray()))) {
-            return (Championship) input.readObject();
+            Championship restored = (Championship) input.readObject();
+            useTestVenues(restored);
+            return restored;
         }
+    }
+
+    private static void useTestVenues(Championship tournament) {
+        var city = new Core.domain.City(1, "Test City", tournament.getCountries().get(0));
+        java.util.List<Core.domain.Stadium> stadiums = new java.util.ArrayList<>();
+        for (int i = 1; i <= 13; i++) stadiums.add(new Core.domain.Stadium(i, "Stadium " + i, city));
+        tournament.setVenueLoader(countries -> new Core.loader.VenueLoader.Venues(java.util.List.of(city), stadiums));
     }
 
     private static void check(boolean condition, String message) {

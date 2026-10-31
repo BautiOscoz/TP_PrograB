@@ -1,6 +1,9 @@
 package Core.incidents;
 
 import Core.domain.Player;
+import Core.domain.Team;
+import Core.domain.ParticipationTimeline;
+import java.util.List;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -8,16 +11,28 @@ import java.io.Serializable;
 public abstract class Incident implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
-    private int minute;
+    private final int minute;
 
     public Incident(int minute) {
+        if (minute < 0) throw new IllegalArgumentException("Incident minute cannot be negative.");
         this.minute = minute;
     }
 
     public int getMinute() { return minute; }
-    public void setMinute(int minute) { this.minute = minute; }
 
     public abstract String getDescription();
+
+    public void applyToParticipation(ParticipationTimeline timeline) {
+        // Goals, cards without expulsion and shootout penalties do not change participation.
+    }
+
+    /** Replays this event on a temporary lineup; never changes the saved lineup or suspensions. */
+    public void applyToLineup(Team team, List<Player> playersOnField) {
+        // Most incidents do not change which players are on the field.
+    }
+
+    /** Player whose team is identified when displaying this event. */
+    public Player getParticipant() { return getAffectedPlayer(); }
 
     public Player getScoringPlayer() { return null; }
     public Player getGoalkeeper() { return null; }

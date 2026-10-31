@@ -24,6 +24,9 @@ public class SecondLegMatch extends Match implements Serializable {
     public SecondLegMatch asSecondLeg() { return this; }
 
     @Override
+    public String getStageDescription() { return "Second leg"; }
+
+    @Override
     public boolean isSettledByPenalties() { return settledByPenalties; }
     public void setSettledByPenalties(boolean settledByPenalties) { this.settledByPenalties = settledByPenalties; }
 }

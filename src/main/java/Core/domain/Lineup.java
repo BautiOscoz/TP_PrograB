@@ -38,7 +38,7 @@ public class Lineup implements Serializable {
     }
 
 
-    public List<Player> selectBestLineup() {
+    private List<Player> selectBestLineup() {
         List<Player> available = team.getPlayers().stream()
                 .filter(player -> !player.isSuspended())
                 .sorted(Comparator.comparingDouble(Player::getAverageRating).reversed())
@@ -64,8 +64,10 @@ public class Lineup implements Serializable {
     }
 
     public List<Player> getPlayers() {
-        return players;
+        return java.util.Collections.unmodifiableList(players);
     }
+
+    public Team getTeam() { return team; }
 
     public FormationType getFormation(){
         return formation;

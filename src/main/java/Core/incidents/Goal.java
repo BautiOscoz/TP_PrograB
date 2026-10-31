@@ -22,6 +22,8 @@ public class Goal extends Incident implements Serializable {
     }
 
     public Player getScorer() { return scorer; }
+    @Override
+    public Player getParticipant() { return scorer; }
     public boolean isPenalty() { return isPenalty; }
     public boolean isOwnGoal() { return isOwnGoal; }
 

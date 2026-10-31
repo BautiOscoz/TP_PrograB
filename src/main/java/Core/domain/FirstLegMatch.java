@@ -12,4 +12,7 @@ public class FirstLegMatch extends Match implements Serializable {
 
     @Override
     public FirstLegMatch asFirstLeg() { return this; }
+
+    @Override
+    public String getStageDescription() { return "First leg"; }
 }

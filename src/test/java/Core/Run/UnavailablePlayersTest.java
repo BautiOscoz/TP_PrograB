@@ -13,10 +13,13 @@ public class UnavailablePlayersTest {
         forfeitsAndReports(true);
         forfeitsAndReports(false);
         lineupIsReadOnly();
-        postponedFixture();
+        randomFixture();
         newRedCardsRemainSuspended();
         tiedAdministrativeSeries();
         permanentSquadProblem();
+        incidentTeams();
+        polymorphicMatchTimeline();
+        protectedMatchState();
         if (Arrays.asList(args).contains("--database")) knockoutProgression();
         System.out.println("Unavailable player checks passed.");
     }
@@ -65,7 +68,7 @@ public class UnavailablePlayersTest {
         check(banned.isSuspended() && !lineup.getPlayers().contains(banned), "Lineup construction must not serve bans");
     }
 
-    private static void postponedFixture() throws Exception {
+    private static void randomFixture() throws Exception {
         Championship c = tournament();
         Match m = c.getMatches().get(0);
         var date = m.getMatchDate();
@@ -73,14 +76,13 @@ public class UnavailablePlayersTest {
         var laterDate = later.getMatchDate();
         suspendKeepers(m.getHomeTeam()); suspendKeepers(m.getAwayTeam());
         c.simulateNextMatchday();
-        check(!m.isPlayed() && m.getPostponements() == 1 && m.getMatchDate().equals(date.plusDays(1)), "Both unavailable: postpone");
-        check(c.getCurrentMatchday() == 1 && c.getPlayedMatches().size() == 7, "Do not advance with pending fixture");
-        check(later.getMatchDate().equals(laterDate.plusDays(1)), "Later dates shifted");
+        check(m.isPlayed() && m.isForfeit() && m.getPostponements() == 0, "Both unavailable: random administrative result");
+        check(m.getMatchDate().equals(date) && later.getMatchDate().equals(laterDate), "Dates unchanged");
+        check(c.getCurrentMatchday() == 2 && c.getPlayedMatches().size() == 8, "Matchday completes immediately");
+        check(m.getAdministrativeReason().contains("random draw"), "Random decision explained");
+        check(m.getIncidents().isEmpty(), "No fictitious incidents");
         Championship restored = roundTrip(c);
-        check(restored.getMatches().get(0).getPostponements() == 1, "Postponement survives save/load");
-        restored.simulateNextMatchday();
-        check(restored.getMatches().get(0).isPlayed() && !restored.getMatches().get(0).isForfeit(), "Replay with bans served");
-        check(restored.getPlayedMatches().size() == 8 && restored.getCurrentMatchday() == 2, "Other fixtures not replayed");
+        check(restored.getMatches().get(0).getAdministrativeReason().equals(m.getAdministrativeReason()), "Random decision survives save/load");
     }
 
     private static void newRedCardsRemainSuspended() throws Exception {
@@ -126,9 +128,109 @@ public class UnavailablePlayersTest {
         Team emptyA = new Team(101, "Empty A", source.getHomeTeam().getCountry(), 1, source.getHomeTeam().getCoach());
         Team emptyB = new Team(102, "Empty B", source.getAwayTeam().getCountry(), 2, source.getAwayTeam().getCoach());
         Match m = new FinalMatch(source.getMatchDate(), emptyA, emptyB, source.getReferee());
-        boolean refused = false;
-        try { new MatchSimulator(new Random()).simulate(m); } catch (IllegalStateException e) { refused = true; }
-        check(refused && !m.isPlayed() && m.getPostponements() == 0, "Invalid squads must not postpone forever");
+        for (boolean homeWins : new boolean[]{true, false}) {
+            Match fixture = new FinalMatch(source.getMatchDate(), emptyA, emptyB, source.getReferee());
+            new MatchSimulator(new Random() {
+                @Override public boolean nextBoolean() { return homeWins; }
+            }).simulate(fixture);
+            check(fixture.isPlayed() && fixture.isForfeit(), "Empty squads resolved by draw");
+            check(fixture.getHomeGoals() == (homeWins ? 3 : 0)
+                    && fixture.getAwayGoals() == (homeWins ? 0 : 3), "Both draw outcomes supported");
+        }
+    }
+
+    private static void polymorphicMatchTimeline() throws Exception {
+        Match match = tournament().getMatches().get(0);
+        Team home = match.getHomeTeam(), away = match.getAwayTeam();
+        FormationType homeFormation = Arrays.stream(FormationType.values())
+                .filter(f -> Lineup.canUseFormation(home, f)).findFirst().orElseThrow();
+        FormationType awayFormation = Arrays.stream(FormationType.values())
+                .filter(f -> Lineup.canUseFormation(away, f)).findFirst().orElseThrow();
+        Lineup homeLineup = new Lineup(home, homeFormation);
+        Lineup awayLineup = new Lineup(away, awayFormation);
+        match.setInitialLineups(homeLineup, awayLineup);
+        Player outgoing = homeLineup.getPlayers().get(0);
+        Player incoming = home.getPlayers().stream().filter(p -> !homeLineup.getPlayers().contains(p))
+                .findFirst().orElseThrow();
+        Player opponent = awayLineup.getPlayers().get(0);
+        match.addIncident(new Core.incidents.YellowCard(10, outgoing));
+        match.addIncident(new Core.incidents.Goal(15, outgoing, opponent, false, false));
+        match.addIncident(new Core.incidents.Substitution(30, incoming, outgoing));
+        match.addIncident(new Core.incidents.RedCard(40, opponent));
+        match.addIncident(new Core.incidents.RedCard(60, incoming));
+        check(match.getPlayersOnField(home, 29).equals(homeLineup.getPlayers()), "Goals and yellows leave lineup unchanged");
+        check(match.getPlayersOnField(home, 30).contains(incoming)
+                && !match.getPlayersOnField(home, 30).contains(outgoing), "Substitution takes effect at its minute");
+        check(match.getPlayersOnField(home, 40).size() == 11
+                && match.getPlayersOnField(away, 40).size() == 10, "Red only affects its own team");
+        check(match.getPlayersOnField(home, 60).size() == 10
+                && !match.getPlayersOnField(home, 60).contains(incoming), "Substitute can be sent off");
+        check(homeLineup.getPlayers().contains(outgoing) && homeLineup.getPlayers().size() == 11,
+                "Timeline queries preserve recorded starting lineup");
+        check(match.getPlayersOnField(home, 29).contains(outgoing) && !incoming.isSuspended(),
+                "Historical queries have no side effects");
+        List<Match> types = List.of(match,
+                new FirstLegMatch(match.getMatchDate(), home, away, match.getReferee()),
+                new SecondLegMatch(match.getMatchDate(), home, away, match.getReferee(), 0, 0),
+                new FinalMatch(match.getMatchDate(), home, away, match.getReferee()));
+        List<String> labels = List.of("Group matchday " + match.getMatchday(), "First leg", "Second leg", "Final");
+        for (int i = 0; i < types.size(); i++) {
+            check(types.get(i).getStageDescription().equals(labels.get(i)), "Polymorphic stage description");
+            check(new MatchDetailsFormatter().title(types.get(i)).contains(labels.get(i)), "Report uses stage description");
+        }
+        Match restored = roundTrip(match);
+        check(restored.getPlayersOnField(restored.getHomeTeam(), 60).size() == 10,
+                "Polymorphic effects survive save/load");
+    }
+
+    private static void protectedMatchState() throws Exception {
+        Match match = tournament().getMatches().get(0);
+        new MatchSimulator(new Random(22)).simulate(match);
+        int homeGoals = match.getHomeGoals();
+        expectRejected(() -> match.setHomeGoals(homeGoals + 1));
+        expectRejected(() -> match.setPlayed(false));
+        expectRejected(() -> match.complete(0, 0));
+        expectRejected(() -> match.getHomeLineup().getPlayers().clear());
+        expectRejected(() -> match.setInitialLineups(match.getHomeLineup(), match.getAwayLineup()));
+        Match pending = tournament().getMatches().get(0);
+        expectRejected(() -> pending.complete(3, -1));
+        check(!pending.isPlayed() && pending.getHomeGoals() == 0, "Invalid completion changes nothing");
+        expectRejected(() -> pending.setHomeGoals(-1));
+        Player starter = match.getHomeLineup().getPlayers().get(0);
+        Player substitute = match.getAwayLineup().getPlayers().get(0);
+        ParticipationTimeline timeline = new ParticipationTimeline(List.of(starter), List.of());
+        new Core.incidents.Goal(10, starter, substitute, false, false).applyToParticipation(timeline);
+        new Core.incidents.Substitution(90, substitute, starter).applyToParticipation(timeline);
+        new Core.incidents.PenaltyShootout(91, substitute, true).applyToParticipation(timeline);
+        check(timeline.minutesPlayed().get(starter) == 90
+                && timeline.minutesPlayed().containsKey(substitute)
+                && timeline.minutesPlayed().get(substitute) == 0, "Minute 90 counts appearance, shootout adds no minutes");
+        expectRejected(() -> timeline.minutesPlayed().clear());
+    }
+
+    private static void expectRejected(Runnable action) {
+        try { action.run(); }
+        catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException expected) { return; }
+        throw new AssertionError("Invalid mutation was accepted");
+    }
+
+    private static void incidentTeams() throws Exception {
+        Match match = tournament().getMatches().get(0);
+        Player home = match.getHomeTeam().getPlayers().get(0);
+        Player away = match.getAwayTeam().getPlayers().get(0);
+        var events = List.of(
+                new Core.incidents.Goal(1, home, away, false, false),
+                new Core.incidents.Goal(2, home, home, false, true),
+                new Core.incidents.YellowCard(3, home),
+                new Core.incidents.RedCard(4, home),
+                new Core.incidents.Substitution(5, home, home),
+                new Core.incidents.PenaltyShootout(91, home, true));
+        for (var event : events) {
+            check(IncidentFormatter.describe(match, event).startsWith("[" + match.getHomeTeam().getName() + "]"),
+                    "Participant team shown for every incident, including own goals");
+        }
+        check(IncidentFormatter.describe(match, new Core.incidents.YellowCard(6, away))
+                .startsWith("[" + match.getAwayTeam().getName() + "]"), "Away team correctly identified");
     }
 
     private static void knockoutProgression() throws Exception {
@@ -138,9 +240,7 @@ public class UnavailablePlayersTest {
                 .max(java.time.LocalDate::compareTo).orElseThrow().plusDays(7));
         Match first = c.getMatches().stream().filter(m -> m.asFirstLeg() != null).findFirst().orElseThrow();
         suspendKeepers(first.getHomeTeam()); suspendKeepers(first.getAwayTeam());
-        check(c.simulateNextKnockoutMatch() == first && !first.isPlayed(), "Knockout postponement returns pending fixture");
-        suspendKeepers(first.getHomeTeam());
-        check(c.simulateNextKnockoutMatch().isForfeit(), "First leg administrative loss");
+        check(c.simulateNextKnockoutMatch() == first && first.isForfeit(), "Knockout random result resolved immediately");
         boolean injectedReturn = false, administrativeShootout = false, finalForfeit = false;
         for (int step = 0; c.getStage() != TournamentStage.FINISHED && step < 60; step++) {
             if (!c.hasPendingPenaltyShootout()) {

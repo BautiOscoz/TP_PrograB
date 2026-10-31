@@ -44,10 +44,10 @@ public abstract class Match implements Serializable {
         played = true;
     }
 
-    public void postponeForUnavailableTeams() {
-        if (played) throw new IllegalStateException("A resolved match cannot be postponed.");
-        matchDate = matchDate.plusDays(1);
-        postponements++;
+    public void awardRandomForfeit(boolean homeWins) {
+        awardForfeit(!homeWins);
+        administrativeReason = "Neither team can field a valid lineup. Winner selected by random draw: "
+                + (homeWins ? homeTeam : awayTeam).getName() + ". Administrative result (3-0 victory).";
     }
 
     public Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee) {
@@ -101,23 +101,7 @@ public abstract class Match implements Serializable {
                 break;
             }
 
-            Player playerIn = incident.getPlayerIn();
-            Player playerOut = incident.getPlayerOut();
-            if (playerIn != null && playerOut != null) {
-                if (team.getPlayers().contains(playerIn)) {
-                    playersOnField.remove(playerOut);
-                    if (!playersOnField.contains(playerIn)) {
-                        playersOnField.add(playerIn);
-                    }
-                }
-            }
-
-            if (incident.isRedCard()) {
-                Player affectedPlayer = incident.getAffectedPlayer();
-                if (team.getPlayers().contains(affectedPlayer)) {
-                    playersOnField.remove(affectedPlayer);
-                }
-            }
+            incident.applyToLineup(team, playersOnField);
         }
 
         return Collections.unmodifiableList(playersOnField);
@@ -128,19 +112,43 @@ public abstract class Match implements Serializable {
     public void setMatchDate(LocalDate matchDate) { this.matchDate = matchDate; }
 
     public Team getHomeTeam() { return homeTeam; }
-    public void setHomeTeam(Team homeTeam) { this.homeTeam = homeTeam; }
 
     public Team getAwayTeam() { return awayTeam; }
-    public void setAwayTeam(Team awayTeam) { this.awayTeam = awayTeam; }
 
     public Referee getReferee() { return referee; }
     public void setReferee(Referee referee) { this.referee = referee; }
 
     public int getHomeGoals() { return homeGoals; }
-    public void setHomeGoals(int homeGoals) { this.homeGoals = homeGoals; }
+    public void setHomeGoals(int homeGoals) {
+        requirePending();
+        requireValidGoals(homeGoals);
+        this.homeGoals = homeGoals;
+    }
 
     public int getAwayGoals() { return awayGoals; }
-    public void setAwayGoals(int awayGoals) { this.awayGoals = awayGoals; }
+    public void setAwayGoals(int awayGoals) {
+        requirePending();
+        requireValidGoals(awayGoals);
+        this.awayGoals = awayGoals;
+    }
+
+    /** Records both scores and closes the match in one validated operation. */
+    public void complete(int homeGoals, int awayGoals) {
+        requirePending();
+        requireValidGoals(homeGoals);
+        requireValidGoals(awayGoals);
+        this.homeGoals = homeGoals;
+        this.awayGoals = awayGoals;
+        played = true;
+    }
+
+    private void requirePending() {
+        if (played) throw new IllegalStateException("The match is already resolved.");
+    }
+
+    private void requireValidGoals(int goals) {
+        if (goals < 0) throw new IllegalArgumentException("Goals cannot be negative.");
+    }
 
     public List<Incident> getIncidents() { return Collections.unmodifiableList(incidents); }
 
@@ -148,17 +156,28 @@ public abstract class Match implements Serializable {
     public Lineup getAwayLineup() { return awayLineup; }
 
     public void setInitialLineups(Lineup homeLineup, Lineup awayLineup) {
+        if (this.homeLineup != null || this.awayLineup != null) {
+            throw new IllegalStateException("Initial lineups have already been recorded.");
+        }
         if (homeLineup == null || awayLineup == null
                 || homeLineup.getPlayers().size() != 11
                 || awayLineup.getPlayers().size() != 11) {
             throw new IllegalArgumentException("Each initial lineup must contain exactly 11 players.");
+        }
+        if (homeLineup.getTeam() != homeTeam || awayLineup.getTeam() != awayTeam) {
+            throw new IllegalArgumentException("Each lineup must belong to the corresponding team.");
         }
         this.homeLineup = homeLineup;
         this.awayLineup = awayLineup;
     }
 
     public boolean isPlayed() { return played; }
-    public void setPlayed(boolean played) { this.played = played; }
+    public void setPlayed(boolean played) {
+        if (this.played && !played) throw new IllegalStateException("A resolved match cannot be reopened.");
+        this.played = played;
+    }
+
+    public abstract String getStageDescription();
 
     public boolean isGroupStage() { return false; }
     public FirstLegMatch asFirstLeg() { return null; }

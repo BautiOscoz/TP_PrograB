@@ -486,7 +486,7 @@ public class TournamentController {
         // Seleccionar carpeta de fotografías.
         showInformation("Participant photographs",
                 "Name each photograph with the person's document number, for example 12345678.jpg. "
-                        + "JPG, JPEG and PNG are supported. Missing photos will be reported in the result.");
+                        + "JPG, JPEG and PNG are supported. Missing photos use a sample illustration and are reported in the result.");
         DirectoryChooser directoryChooser = new DirectoryChooser();
 
         directoryChooser.setTitle(
@@ -664,6 +664,12 @@ public class TournamentController {
 
 
     private void configureColumns() {
+        standingsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        standingsTable.getColumns().forEach(column -> {
+            column.setSortable(false);
+            column.setMinWidth(column == teamColumn ? 150 : 42);
+        });
+        teamColumn.getStyleClass().add("team-column");
         positionColumn.setCellValueFactory(cell ->
                 new ReadOnlyObjectWrapper<>(
                         standingsTable.getItems().indexOf(cell.getValue()) + 1
