@@ -447,3 +447,92 @@
 .match-dialog, .match-dialog > .header-panel {
     -fx-background-color: #101d2d;
 }
+
+/* Final visual polish: hierarchy, keyboard focus and readable dashboard controls. */
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #13263b, #0d1928);
+    -fx-spacing: 5px;
+}
+.sidebar .menu-button {
+    -fx-background-color: #192d43;
+    -fx-border-color: #344c65;
+    -fx-text-fill: #e1eaf5;
+    -fx-pref-height: 29px;
+    -fx-min-height: 29px;
+    -fx-font-size: 11px;
+}
+.sidebar .menu-button:hover {
+    -fx-background-color: #29445f;
+    -fx-border-color: #d4af37;
+}
+#simulateMatchdayBtn, #simulateKnockoutBtn {
+    -fx-background-color: #e3c166;
+    -fx-border-color: #e3c166;
+    -fx-text-fill: #13263b;
+}
+#simulateMatchdayBtn:hover, #simulateKnockoutBtn:hover {
+    -fx-background-color: #f4d98d;
+    -fx-border-color: #f4d98d;
+}
+.button:focused {
+    -fx-border-color: #91caff;
+    -fx-border-width: 2px;
+    -fx-border-insets: -1px;
+}
+.content-area .phase-label {
+    -fx-background-color: #233c52;
+    -fx-background-radius: 6px;
+    -fx-padding: 5px 10px;
+    -fx-text-fill: #c4e6f4;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.content-area .page-title { -fx-font-size: 25px; }
+.content-area .section-title { -fx-font-size: 17px; }
+.content-area .standings-table .table-row-cell { -fx-cell-size: 32px; }
+.content-area .standings-table .column-header { -fx-pref-height: 34px; }
+.content-area .standings-table .table-cell { -fx-font-size: 12px; }
+.ranking-table .table-row-cell:filled:hover,
+.content-area .standings-table .table-row-cell:filled:hover {
+    -fx-background-color: #2b465f;
+}
+.content-area .round-title {
+    -fx-text-fill: #e4c875;
+    -fx-padding: 7px 2px;
+}
+.content-area .winner-banner {
+    -fx-background-color: #263c3a;
+    -fx-border-color: #577765;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 12px;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+.content-area .match-team-winner, .content-area .match-score-winner {
+    -fx-text-fill: #a0edc5;
+    -fx-font-weight: bold;
+}
+.form-card {
+    -fx-background-color: #14263a;
+    -fx-border-color: #b69a54;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.32), 18, 0.12, 0, 5);
+}
+.form-card .custom-button {
+    -fx-background-color: #e3c166;
+    -fx-text-fill: #13263b;
+}
+.form-card .custom-button:hover { -fx-background-color: #f4d98d; }
+.form-card .form-label { -fx-text-fill: #d5e2f0; }
+.custom-textfield:focused { -fx-border-color: #91caff; }
+.content-area .scroll-bar, .match-dialog .scroll-bar {
+    -fx-background-color: #17283b;
+}
+.content-area .scroll-bar .thumb, .match-dialog .scroll-bar .thumb {
+    -fx-background-color: #526b83;
+    -fx-background-radius: 6px;
+}
+.content-area .scroll-bar .increment-button,
+.content-area .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}

@@ -37,7 +37,7 @@
                             </children>
                         </HBox>
                         <Button fx:id="knockoutBtn" onAction="#handleKnockoutStage" styleClass="menu-button" text="Knockout Stage" />
-                        <Button fx:id="simulateKnockoutBtn" onAction="#handleSimulateKnockoutMatch" styleClass="menu-button" text="Simulate Next Knockout Match" />
+                        <Button fx:id="simulateKnockoutBtn" onAction="#handleSimulateKnockoutMatch" styleClass="menu-button" text="Simulate Next Match" />
                         <Button fx:id="scorersBtn" onAction="#handleTopScorers" styleClass="menu-button" text="Top Scorers" />
                         <Button fx:id="participationBtn" onAction="#handleParticipation" styleClass="menu-button" text="Participation Ranking" />
                         <Button fx:id="fairplayBtn" onAction="#handleFairPlay" styleClass="menu-button" text="Fair Play" />
@@ -55,10 +55,10 @@
                     <children>
                         <HBox alignment="CENTER_LEFT" styleClass="page-header">
                             <children>
-                                <VBox spacing="2.0">
+                                <VBox minWidth="0.0" spacing="7.0" HBox.hgrow="ALWAYS">
                                     <children>
-                                        <Label fx:id="tournamentNameLabel" maxWidth="740.0" styleClass="page-title" text="Tournament" />
-                                        <Label fx:id="phaseLabel" maxWidth="740.0" wrapText="true" styleClass="phase-label" text="Group Stage" />
+                                        <Label fx:id="tournamentNameLabel" minWidth="0.0" maxWidth="Infinity" wrapText="true" styleClass="page-title" text="Tournament" />
+                                        <Label fx:id="phaseLabel" maxWidth="Infinity" wrapText="true" styleClass="phase-label" text="Group Stage" />
                                     </children>
                                 </VBox>
                             </children>
@@ -69,7 +69,7 @@
                                 <Button text="Match Details / History" onAction="#handleMatchHistory" styleClass="custom-button" />
                             </children>
                         </HBox>
-                        <TableView fx:id="standingsTable" maxHeight="180.0" maxWidth="Infinity" minHeight="180.0" prefHeight="180.0" styleClass="standings-table">
+                        <TableView fx:id="standingsTable" maxHeight="178.0" maxWidth="Infinity" minHeight="178.0" prefHeight="178.0" styleClass="standings-table">
                             <columnResizePolicy>
                                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
                             </columnResizePolicy>
