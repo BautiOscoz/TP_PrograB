@@ -42,7 +42,7 @@ public final class PlayerAttributeFormatter {
                 .collect(Collectors.joining("\n"));
     }
 
-    private static String label(String key) {
+    public static String label(String key){
         // Preserve additional source fields instead of silently dropping them.
         return LABELS.getOrDefault(key, key);
     }

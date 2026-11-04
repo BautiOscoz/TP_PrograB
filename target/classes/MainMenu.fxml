@@ -8,16 +8,15 @@
 
 <AnchorPane fx:id="rootPane" prefHeight="500.0" prefWidth="750.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.MainMenuController">
     <children>
-        <ImageView fx:id="backgroundImage" fitHeight="-Infinity" fitWidth="-Infinity" pickOnBounds="true" preserveRatio="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <ImageView fx:id="backgroundImage" fitHeight="${rootPane.height}" fitWidth="${rootPane.width}" mouseTransparent="true" preserveRatio="false">
             <image>
                 <Image url="@BackroundImage.jpg" />
             </image>
         </ImageView>
-        <VBox alignment="CENTER" layoutY="59.0" prefHeight="441.0" prefWidth="750.0" spacing="14.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="59.0">
+        <VBox alignment="CENTER" prefHeight="${rootPane.height * 0.6 - 16}" spacing="14.0" AnchorPane.bottomAnchor="16.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
             <children>
                 <Button onAction="#handleNewTournament" prefWidth="270.0" styleClass="custom-button" text="New Tournament" />
                 <Button onAction="#handleLoadTournament" prefWidth="270.0" styleClass="custom-button" text="Load Tournament" />
-                <Button onAction="#handleStats" prefWidth="270.0" styleClass="custom-button" text="Stats" />
                 <Button onAction="#handleExit" prefWidth="270.0" styleClass="custom-button" text="Exit" />
             </children>
         </VBox>

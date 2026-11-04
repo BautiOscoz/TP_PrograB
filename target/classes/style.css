@@ -1,6 +1,7 @@
 .root {
-    -fx-font-family: "Arial";
+    -fx-font-family: "Segoe UI", "Arial";
 }
+
 
 .custom-button,
 .secondary-button,
@@ -151,8 +152,6 @@
 .knockout-bracket {
     -fx-padding: 2px 0 4px 0;
     -fx-background-color: #f3f4f6;
-    -fx-pref-height: 490px;
-    -fx-max-height: 490px;
 }
 
 
@@ -179,9 +178,9 @@
     -fx-pref-width: 170px;
     -fx-min-width: 170px;
     -fx-max-width: 170px;
-    -fx-pref-height: 92px;
-    -fx-min-height: 92px;
-    -fx-max-height: 92px;
+    -fx-pref-height: 128px;
+    -fx-min-height: 128px;
+    -fx-max-height: 128px;
     -fx-padding: 4px 7px;
     -fx-background-color: white;
     -fx-border-color: #cbd5e1;
@@ -347,4 +346,368 @@
 .crud-actions .button {
     -fx-pref-width: 100px;
     -fx-pref-height: 32px;
+}
+
+/* Tournament dashboard surfaces. Form and database screens keep their own palette. */
+.content-area {
+    -fx-background-color: #101d2d;
+}
+.content-area .label, .match-dialog .label {
+    -fx-text-fill: #dce6f2;
+}
+.content-area .page-title {
+    -fx-text-fill: #f4f7fc;
+}
+.content-area .phase-label, .content-area .ranking-summary {
+    -fx-text-fill: #a5b8ce;
+}
+.page-header {
+    -fx-padding: 0 0 14px 0;
+    -fx-border-color: transparent transparent #30445c transparent;
+}
+.sidebar {
+    -fx-border-color: transparent #30445c transparent transparent;
+}
+.content-area .report-area, .match-dialog .report-area {
+    -fx-control-inner-background: #1b2c40;
+    -fx-background-color: #1b2c40;
+    -fx-text-fill: #e1eaf5;
+    -fx-border-color: #30445c;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-highlight-fill: #35567a;
+    -fx-padding: 8px;
+    -fx-font-size: 13px;
+}
+.content-area .report-area .content, .match-dialog .report-area .content {
+    -fx-background-color: #1b2c40;
+}
+.ranking-table, .content-area .standings-table {
+    -fx-background-color: #1b2c40;
+    -fx-control-inner-background: #1b2c40;
+    -fx-control-inner-background-alt: #203248;
+    -fx-border-color: #30445c;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 3px;
+    -fx-table-cell-border-color: transparent;
+}
+.ranking-table .column-header-background, .ranking-table .column-header,
+.ranking-table .filler, .content-area .standings-table .column-header-background,
+.content-area .standings-table .column-header, .content-area .standings-table .filler {
+    -fx-background-color: #263e57;
+}
+.ranking-table .column-header .label, .content-area .standings-table .column-header .label {
+    -fx-text-fill: #f0d681;
+    -fx-font-weight: bold;
+    -fx-padding: 7px 2px;
+}
+.ranking-table .table-cell, .content-area .standings-table .table-cell {
+    -fx-text-fill: #e1eaf5;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 5px 9px;
+}
+.ranking-table .table-row-cell { -fx-cell-size: 38px; }
+.content-area .standings-table .table-cell {
+    -fx-alignment: CENTER;
+    -fx-padding: 5px 3px;
+}
+.content-area .standings-table .team-column {
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 5px 12px;
+}
+.content-area .standings-table .team-column .label {
+    -fx-alignment: CENTER_LEFT;
+}
+.ranking-table .table-row-cell:selected, .content-area .standings-table .table-row-cell:selected {
+    -fx-background-color: #36577a;
+}
+.ranking-table .table-row-cell:empty, .content-area .standings-table .table-row-cell:empty {
+    -fx-background-color: #1b2c40;
+}
+.ranking-table .table-row-cell:empty .table-cell { -fx-border-width: 0; }
+.content-area .knockout-bracket { -fx-background-color: transparent; }
+.bracket-scroll, .bracket-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.form-card .button { -fx-min-height: 34px; }
+.content-area .match-card {
+    -fx-background-color: #1b2c40;
+    -fx-border-color: #3c536c;
+    -fx-cursor: hand;
+}
+.content-area .match-card:hover { -fx-border-color: #d4af37; }
+.content-area .match-team-winner, .content-area .match-score-winner,
+.content-area .match-winner { -fx-text-fill: #83dcb0; }
+.content-area .winner-banner { -fx-text-fill: #f0d681; }
+.content-area .combo-box .list-cell, .match-dialog .combo-box .list-cell {
+    -fx-text-fill: #172b40;
+}
+.match-dialog, .match-dialog > .header-panel {
+    -fx-background-color: #101d2d;
+}
+
+/* Final visual polish: hierarchy, keyboard focus and readable dashboard controls. */
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #13263b, #0d1928);
+    -fx-spacing: 5px;
+}
+.sidebar .menu-button {
+    -fx-background-color: #192d43;
+    -fx-border-color: #344c65;
+    -fx-text-fill: #e1eaf5;
+    -fx-pref-height: 29px;
+    -fx-min-height: 29px;
+    -fx-font-size: 11px;
+}
+.sidebar .menu-button:hover {
+    -fx-background-color: #29445f;
+    -fx-border-color: #d4af37;
+}
+#simulateMatchdayBtn, #simulateKnockoutBtn {
+    -fx-background-color: #e3c166;
+    -fx-border-color: #e3c166;
+    -fx-text-fill: #13263b;
+}
+#simulateMatchdayBtn:hover, #simulateKnockoutBtn:hover {
+    -fx-background-color: #f4d98d;
+    -fx-border-color: #f4d98d;
+}
+.button:focused {
+    -fx-border-color: #91caff;
+    -fx-border-width: 2px;
+    -fx-border-insets: -1px;
+}
+.content-area .phase-label {
+    -fx-background-color: #233c52;
+    -fx-background-radius: 6px;
+    -fx-padding: 5px 10px;
+    -fx-text-fill: #c4e6f4;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.content-area .page-title { -fx-font-size: 25px; }
+.content-area .section-title { -fx-font-size: 17px; }
+.content-area .standings-table .table-row-cell { -fx-cell-size: 32px; }
+.content-area .standings-table .column-header { -fx-pref-height: 34px; }
+.content-area .standings-table .table-cell { -fx-font-size: 12px; }
+.ranking-table .table-row-cell:filled:hover,
+.content-area .standings-table .table-row-cell:filled:hover {
+    -fx-background-color: #2b465f;
+}
+.content-area .round-title {
+    -fx-text-fill: #e4c875;
+    -fx-padding: 7px 2px;
+}
+.content-area .winner-banner {
+    -fx-background-color: #263c3a;
+    -fx-border-color: #577765;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 12px;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+.content-area .match-team-winner, .content-area .match-score-winner {
+    -fx-text-fill: #a0edc5;
+    -fx-font-weight: bold;
+}
+.form-card {
+    -fx-background-color: #14263a;
+    -fx-border-color: #b69a54;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.32), 18, 0.12, 0, 5);
+}
+.form-card .custom-button {
+    -fx-background-color: #e3c166;
+    -fx-text-fill: #13263b;
+}
+.form-card .custom-button:hover { -fx-background-color: #f4d98d; }
+.form-card .form-label { -fx-text-fill: #d5e2f0; }
+.custom-textfield:focused { -fx-border-color: #91caff; }
+.content-area .scroll-bar, .match-dialog .scroll-bar {
+    -fx-background-color: #17283b;
+}
+.content-area .scroll-bar .thumb, .match-dialog .scroll-bar .thumb {
+    -fx-background-color: #526b83;
+    -fx-background-radius: 6px;
+}
+.content-area .scroll-bar .increment-button,
+.content-area .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+/* Fondo general de las pestañas de jugadores */
+.players-tabs {
+    -fx-background-color: #101d2d;
+    -fx-tab-min-height: 32px;
+}
+
+.players-tabs > .tab-header-area {
+    -fx-padding: 6px 0 0 0;
+}
+
+.players-tabs > .tab-header-area > .tab-header-background {
+    -fx-background-color: #101d2d;
+}
+
+/* Pestañas */
+.players-tabs > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: #192d43;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8px 8px 0 0;
+
+    -fx-border-color: #344c65;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px 8px 0 0;
+
+    -fx-padding: 8px 14px;
+    -fx-cursor: hand;
+}
+
+.players-tabs .tab .tab-label {
+    -fx-text-fill: #e1eaf5;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Pestaña bajo el cursor */
+.players-tabs > .tab-header-area > .headers-region > .tab:hover {
+    -fx-background-color: #29445f;
+    -fx-border-color: #d4af37;
+}
+
+/* Pestaña seleccionada */
+.players-tabs > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: #263e57;
+    -fx-border-color: #d4af37 #344c65 #263e57 #344c65;
+    -fx-border-width: 2px 1px 1px 1px;
+}
+
+.players-tabs .tab:selected .tab-label {
+    -fx-text-fill: #f0d681;
+}
+
+/* Botón para cerrar la pestaña */
+.players-tabs .tab .tab-close-button {
+    -fx-background-color: #a5b8ce;
+}
+
+.players-tabs .tab .tab-close-button:hover {
+    -fx-background-color: #f0d681;
+}
+
+/* Área de contenido */
+.players-tabs > .tab-content-area {
+    -fx-background-color: #101d2d;
+    -fx-padding: 12px 0 0 0;
+}
+
+/* Fondo y separador entre las dos tablas del jugador */
+.players-tabs .split-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.players-tabs .split-pane > .split-pane-divider {
+    -fx-background-color: #30445c;
+    -fx-background-insets: 0 3px;
+    -fx-padding: 0 4px;
+}
+
+/* Centrar los encabezados y los datos de las tablas */
+.players-tabs .ranking-table .column-header .label {
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+}
+
+.players-tabs .ranking-table .table-cell {
+    -fx-alignment: CENTER;
+    -fx-padding: 5px 9px;
+}
+/* Tarjeta con los datos personales */
+.player-info-card {
+    -fx-background-color: #1b2c40;
+    -fx-border-color: #344c65;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 14px;
+}
+
+/* Identificador destacado */
+.content-area .player-id-badge {
+    -fx-background-color: #263e57;
+    -fx-text-fill: #f0d681;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 14px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: #d4af37;
+}
+
+.content-area .player-info-text {
+    -fx-text-fill: #dce6f2;
+    -fx-font-size: 13px;
+}
+
+/* Filtros Position y Player */
+.content-area .player-filter {
+    -fx-background-color: #192d43;
+    -fx-background-insets: 0;
+    -fx-border-color: #344c65;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-min-height: 36px;
+    -fx-cursor: hand;
+}
+
+.content-area .player-filter:hover {
+    -fx-background-color: #29445f;
+    -fx-border-color: #d4af37;
+}
+
+.content-area .player-filter:focused,
+.content-area .player-filter:showing {
+    -fx-border-color: #f0d681;
+}
+
+/* Valor mostrado en el filtro cerrado */
+.content-area .player-filter > .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e1eaf5;
+    -fx-font-size: 12px;
+    -fx-padding: 8px 12px;
+}
+
+.content-area .player-filter .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.content-area .player-filter .arrow {
+    -fx-background-color: #f0d681;
+}
+
+/* Lista desplegable de estos filtros */
+.player-filter .combo-box-popup .list-view {
+    -fx-background-color: #1b2c40;
+    -fx-control-inner-background: #1b2c40;
+    -fx-border-color: #d4af37;
+    -fx-padding: 3px;
+}
+
+.player-filter .combo-box-popup .list-view .list-cell {
+    -fx-background-color: #1b2c40;
+    -fx-text-fill: #e1eaf5;
+    -fx-padding: 9px 12px;
+}
+
+.player-filter .combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: #29445f;
+    -fx-text-fill: #f0d681;
+}
+
+.player-filter .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #36577a;
+    -fx-text-fill: #f0d681;
 }

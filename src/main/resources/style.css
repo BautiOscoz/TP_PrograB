@@ -536,3 +536,178 @@
 .content-area .scroll-bar .decrement-button {
     -fx-background-color: transparent;
 }
+/* Fondo general de las pestañas de jugadores */
+.players-tabs {
+    -fx-background-color: #101d2d;
+    -fx-tab-min-height: 32px;
+}
+
+.players-tabs > .tab-header-area {
+    -fx-padding: 6px 0 0 0;
+}
+
+.players-tabs > .tab-header-area > .tab-header-background {
+    -fx-background-color: #101d2d;
+}
+
+/* Pestañas */
+.players-tabs > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: #192d43;
+    -fx-background-insets: 0;
+    -fx-background-radius: 8px 8px 0 0;
+
+    -fx-border-color: #344c65;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px 8px 0 0;
+
+    -fx-padding: 8px 14px;
+    -fx-cursor: hand;
+}
+
+.players-tabs .tab .tab-label {
+    -fx-text-fill: #e1eaf5;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Pestaña bajo el cursor */
+.players-tabs > .tab-header-area > .headers-region > .tab:hover {
+    -fx-background-color: #29445f;
+    -fx-border-color: #d4af37;
+}
+
+/* Pestaña seleccionada */
+.players-tabs > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: #263e57;
+    -fx-border-color: #d4af37 #344c65 #263e57 #344c65;
+    -fx-border-width: 2px 1px 1px 1px;
+}
+
+.players-tabs .tab:selected .tab-label {
+    -fx-text-fill: #f0d681;
+}
+
+/* Botón para cerrar la pestaña */
+.players-tabs .tab .tab-close-button {
+    -fx-background-color: #a5b8ce;
+}
+
+.players-tabs .tab .tab-close-button:hover {
+    -fx-background-color: #f0d681;
+}
+
+/* Área de contenido */
+.players-tabs > .tab-content-area {
+    -fx-background-color: #101d2d;
+    -fx-padding: 12px 0 0 0;
+}
+
+/* Fondo y separador entre las dos tablas del jugador */
+.players-tabs .split-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.players-tabs .split-pane > .split-pane-divider {
+    -fx-background-color: #30445c;
+    -fx-background-insets: 0 3px;
+    -fx-padding: 0 4px;
+}
+
+/* Centrar los encabezados y los datos de las tablas */
+.players-tabs .ranking-table .column-header .label {
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+}
+
+.players-tabs .ranking-table .table-cell {
+    -fx-alignment: CENTER;
+    -fx-padding: 5px 9px;
+}
+/* Tarjeta con los datos personales */
+.player-info-card {
+    -fx-background-color: #1b2c40;
+    -fx-border-color: #344c65;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 14px;
+}
+
+/* Identificador destacado */
+.content-area .player-id-badge {
+    -fx-background-color: #263e57;
+    -fx-text-fill: #f0d681;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 14px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: #d4af37;
+}
+
+.content-area .player-info-text {
+    -fx-text-fill: #dce6f2;
+    -fx-font-size: 13px;
+}
+
+/* Filtros Position y Player */
+.content-area .player-filter {
+    -fx-background-color: #192d43;
+    -fx-background-insets: 0;
+    -fx-border-color: #344c65;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-min-height: 36px;
+    -fx-cursor: hand;
+}
+
+.content-area .player-filter:hover {
+    -fx-background-color: #29445f;
+    -fx-border-color: #d4af37;
+}
+
+.content-area .player-filter:focused,
+.content-area .player-filter:showing {
+    -fx-border-color: #f0d681;
+}
+
+/* Valor mostrado en el filtro cerrado */
+.content-area .player-filter > .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e1eaf5;
+    -fx-font-size: 12px;
+    -fx-padding: 8px 12px;
+}
+
+.content-area .player-filter .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.content-area .player-filter .arrow {
+    -fx-background-color: #f0d681;
+}
+
+/* Lista desplegable de estos filtros */
+.player-filter .combo-box-popup .list-view {
+    -fx-background-color: #1b2c40;
+    -fx-control-inner-background: #1b2c40;
+    -fx-border-color: #d4af37;
+    -fx-padding: 3px;
+}
+
+.player-filter .combo-box-popup .list-view .list-cell {
+    -fx-background-color: #1b2c40;
+    -fx-text-fill: #e1eaf5;
+    -fx-padding: 9px 12px;
+}
+
+.player-filter .combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: #29445f;
+    -fx-text-fill: #f0d681;
+}
+
+.player-filter .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #36577a;
+    -fx-text-fill: #f0d681;
+}

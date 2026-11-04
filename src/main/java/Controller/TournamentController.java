@@ -46,6 +46,17 @@ import Core.enums.TournamentStage;
 import java.time.LocalDate;
 import java.util.Comparator;
 import Core.report.GroupEvolutionReportService;
+import Core.report.TournamentReportService.TeamStatsRow;
+import javafx.scene.control.TableCell;
+import Core.report.TournamentReportService.PlayerStatsRow;
+import Core.report.TournamentReportService.RefereeStatsRow;
+import Core.report.PlayerAttributeFormatter;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TableRow;
+import javafx.scene.input.MouseButton;
+import java.util.Map;
+import javafx.scene.control.SplitPane;
 
 public class TournamentController {
 
@@ -135,6 +146,9 @@ public class TournamentController {
 
         showGroupTable();
         showKnockoutBracket(false);
+
+        playerPositionFilter.getStyleClass().add("player-filter");
+        individualPlayerFilter.getStyleClass().add("player-filter");
     }
 
     public void setTournament(Championship championship, String tournamentName) {
@@ -301,7 +315,8 @@ public class TournamentController {
     }
 
     @SafeVarargs
-    private final <T> void showRanking(String title, List<T> rows, TableColumn<T, ?>... columns) {
+    private final <T> TableView<T> showRanking(
+            String title, List<T> rows, TableColumn<T, ?>... columns) {
         showPanels(false, false, false);
         phaseLabel.setText(title);
         zoneTitleLabel.setVisible(false);
@@ -316,49 +331,74 @@ public class TournamentController {
         VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
         rankingPanel.getChildren().setAll(summary, table);
         setPanelVisible(rankingPanel, true);
+        return table;
     }
 
     @FXML
     private void handleTeamsStats() {
-        phaseLabel.setText("Teams Stats");
-        zoneTitleLabel.setVisible(false);
-        showReport();
+        TableColumn<TeamStatsRow, Integer> goalsFor =
+                rankingColumn("GF", TeamStatsRow::getGoalsFor);
 
-        StringBuilder text = new StringBuilder();
+        TableColumn<TeamStatsRow, Integer> goalsAgainst =
+                rankingColumn("GA", TeamStatsRow::getGoalsAgainst);
 
-        reportService.getTeamStats(championship).forEach(row ->
-                text.append(row.getTeam().getName())
-                        .append(" - Avg age: ")
-                        .append(String.format("%.1f", row.getAverageAge()))
-                        .append(" - Coach: ")
-                        .append(row.getCoach())
-                        .append(" - Coach age: ")
-                        .append(row.getCoachAge())
-                        .append(" - Coach nationality: ")
-                        .append(row.getCoachNationality())
-                        .append(" - GF: ")
-                        .append(row.getGoalsFor())
-                        .append(" - GA: ")
-                        .append(row.getGoalsAgainst())
-                        .append(" - Effectiveness: ")
-                        .append(String.format(
-                                "%.1f%%",
-                                row.getEffectiveness()
-                        ))
-                        .append("\n")
+        // Las columnas de goles necesitan menos espacio.
+        goalsFor.setMinWidth(45);
+        goalsFor.setPrefWidth(60);
+
+        goalsAgainst.setMinWidth(45);
+        goalsAgainst.setPrefWidth(60);
+
+        showRanking(
+                "Teams Stats",
+                reportService.getTeamStats(championship),
+
+                rankingColumn("Team",
+                        row -> row.getTeam().getName()),
+
+                decimalRankingColumn("Avg age",
+                        TeamStatsRow::getAverageAge, "%.1f"),
+
+                rankingColumn("Coach",
+                        TeamStatsRow::getCoach),
+
+                rankingColumn("Coach age",
+                        TeamStatsRow::getCoachAge),
+
+                rankingColumn("Coach nationality",
+                        TeamStatsRow::getCoachNationality),
+
+                goalsFor,
+                goalsAgainst,
+
+                decimalRankingColumn("Effectiveness",
+                        TeamStatsRow::getEffectiveness, "%.1f%%")
         );
+    }
 
-        reportArea.setText(text.toString());
+    private <T> TableColumn<T, Double> decimalRankingColumn(
+            String title,
+            java.util.function.Function<T, Double> value,
+            String format) {
+
+        TableColumn<T, Double> column = rankingColumn(title, value);
+
+        column.setCellFactory(col -> new TableCell<T, Double>() {
+            @Override
+            protected void updateItem(Double item, boolean empty) {
+                super.updateItem(item, empty);
+
+                setText(empty || item == null
+                        ? null
+                        : String.format(format, item));
+            }
+        });
+
+        return column;
     }
 
     @FXML
     private void handlePlayersStats() {
-        phaseLabel.setText("Players Stats");
-        zoneTitleLabel.setVisible(false);
-
-        showReport();
-        setPlayerFilterVisible(true);
-
         Position position = switch (playerPositionFilter.getValue()) {
             case "Goalkeepers" -> Position.GOALKEEPER;
             case "Defenders" -> Position.DEFENDER;
@@ -367,107 +407,344 @@ public class TournamentController {
             default -> null;
         };
 
-        StringBuilder text = new StringBuilder();
+        List<PlayerStatsRow> rows =
+                reportService.getPlayerStats(championship, position);
 
-        var rows = reportService.getPlayerStats(championship, position);
+        // Actualizar las opciones conservando el jugador seleccionado.
         PlayerChoice previous = individualPlayerFilter.getValue();
+
         List<PlayerChoice> choices = new java.util.ArrayList<>();
         choices.add(new PlayerChoice(null, "All players"));
-        rows.forEach(row -> choices.add(new PlayerChoice(row.getPlayer(),
-                row.getPlayer().getLastName() + ", " + row.getPlayer().getName()
-                        + " - " + row.getTeam().getName() + " (#" + row.getPlayer().getShirtNumber() + ")")));
+
+        for (PlayerStatsRow row : rows) {
+            Player player = row.getPlayer();
+
+            choices.add(new PlayerChoice(
+                    player,
+                    player.getLastName() + ", " + player.getName()
+                            + " - " + row.getTeam().getName()
+                            + " (#" + player.getShirtNumber() + ")"
+            ));
+        }
+
         updatingPlayerChoices = true;
+
         try {
             individualPlayerFilter.getItems().setAll(choices);
-            individualPlayerFilter.setValue(choices.stream()
-                    .filter(choice -> previous != null && choice.player() == previous.player())
-                    .findFirst().orElse(choices.get(0)));
+
+            individualPlayerFilter.setValue(
+                    choices.stream()
+                            .filter(choice -> previous != null
+                                    && choice.player() == previous.player())
+                            .findFirst()
+                            .orElse(choices.get(0))
+            );
         } finally {
             updatingPlayerChoices = false;
         }
+
         Player selectedPlayer = individualPlayerFilter.getValue().player();
 
-        rows.stream().filter(row -> selectedPlayer == null || row.getPlayer() == selectedPlayer).forEach(row -> {
-            text.append(row.getPlayer().getName())
-                    .append(" ")
-                    .append(row.getPlayer().getLastName())
-                    .append(" - ")
-                    .append(row.getTeam().getName())
-                    .append("\nID: ").append(row.getPlayer().getId())
-                    .append(" | Document: ").append(row.getPlayer().getDocumentType())
-                    .append(" ").append(row.getPlayer().getDocumentNumber())
-                    .append("\nBirth date: ").append(row.getPlayer().getBirthDate())
-                    .append(" | Age: ").append(java.time.Period.between(
-                            row.getPlayer().getBirthDate(), LocalDate.now()).getYears())
-                    .append("\nShirt number: ").append(row.getPlayer().getShirtNumber())
-                    .append(" | Position: ")
-                    .append(row.getPosition())
-                    .append(" | Average rating: ")
-                    .append(String.format("%.2f", row.getPlayer().getAverageRating()))
-                    .append("\nSuspended for next match: ")
-                    .append(row.getPlayer().isSuspended() ? "Yes" : "No")
-                    .append("\n\nCHARACTERISTICS\n")
-                    .append(Core.report.PlayerAttributeFormatter.format(row.getPlayer().getCharacteristics()))
-                    .append("\n\nIMPORTED STATISTICS (SOURCE DATA)\n")
-                    .append(Core.report.PlayerAttributeFormatter.format(row.getPlayer().getStatistics()))
-                    .append("\n\nCURRENT TOURNAMENT STATISTICS\nMatches: ")
-                    .append(row.getMatches())
-                    .append(" - Minutes: ")
-                    .append(row.getMinutes())
-                    .append(" - Goals: ")
-                    .append(row.getGoals());
+        List<PlayerStatsRow> filteredRows = rows.stream()
+                .filter(row -> selectedPlayer == null
+                        || row.getPlayer() == selectedPlayer)
+                .toList();
 
-            if (row.getPlayer().getPosition() == Position.GOALKEEPER) {
-                text.append(" - Goals conceded: ")
-                        .append(row.getGoalsAgainst())
-                        .append(" - Average goals conceded per match: ")
-                        .append(
-                                row.getMatches() == 0
-                                        ? "No matches played"
-                                        : String.format(
-                                        "%.2f",
-                                        row.getAverageGoalsAgainst()
-                                )
-                        );
-            }
+        TableView<PlayerStatsRow> table = showRanking(
+                "Players Stats",
+                filteredRows,
 
-            text.append("\n\n");
+                rankingColumn("Player",
+                        row -> row.getPlayer().getName()
+                                + " " + row.getPlayer().getLastName()),
+
+                rankingColumn("Team",
+                        row -> row.getTeam().getName()),
+
+                rankingColumn("Position",
+                        PlayerStatsRow::getPosition),
+
+                rankingColumn("Shirt number",
+                        row -> row.getPlayer().getShirtNumber()),
+
+                rankingColumn("Matches",
+                        PlayerStatsRow::getMatches),
+
+                rankingColumn("Minutes",
+                        PlayerStatsRow::getMinutes),
+
+                rankingColumn("Goals",
+                        PlayerStatsRow::getGoals),
+
+                rankingColumn("Goals conceded",
+                        row -> row.getPlayer().getPosition() == Position.GOALKEEPER
+                                ? row.getGoalsAgainst()
+                                : null),
+
+                decimalRankingColumn("Avg conceded / match",
+                        row -> row.getPlayer().getPosition() == Position.GOALKEEPER
+                                && row.getMatches() > 0
+                                ? row.getAverageGoalsAgainst()
+                                : null,
+                        "%.2f"),
+
+                decimalRankingColumn("Average rating",
+                        row -> row.getPlayer().getAverageRating(),
+                        "%.2f"),
+
+                rankingColumn("Suspended",
+                        row -> row.getPlayer().isSuspended() ? "Yes" : "No")
+        );
+
+        // Permitir desplazamiento horizontal por la cantidad de columnas.
+        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        table.setPlaceholder(new Label(
+                "No players found for the selected filters."
+        ));
+
+        // showRanking oculta los filtros: volver a mostrarlos.
+        setPlayerFilterVisible(true);
+
+        // Quitar la tabla del panel para colocarla dentro de una pestaña.
+        rankingPanel.getChildren().remove(table);
+
+        TabPane tabs = new TabPane();
+        tabs.getStyleClass().add("players-tabs");
+
+        Tab statsTab = new Tab("Players Stats", table);
+        statsTab.setClosable(false);
+
+        tabs.getTabs().add(statsTab);
+
+        VBox.setVgrow(tabs, javafx.scene.layout.Priority.ALWAYS);
+        rankingPanel.getChildren().add(tabs);
+
+        // Abrir la ficha al hacer clic sobre una fila con un jugador.
+        table.setRowFactory(tv -> {
+            TableRow<PlayerStatsRow> tableRow = new TableRow<>();
+
+            tableRow.setOnMouseClicked(event -> {
+                if (!tableRow.isEmpty()
+                        && event.getButton() == MouseButton.PRIMARY
+                        && event.getClickCount() == 1) {
+
+                    openPlayerTab(tabs, tableRow.getItem());
+                }
+            });
+
+            return tableRow;
         });
+    }
 
-        if (text.length() == 0) {
-            text.append("No players found for the selected position.");
+    private void openPlayerTab(TabPane tabs, PlayerStatsRow row) {
+        Player player = row.getPlayer();
+
+        Tab existingTab = tabs.getTabs().stream()
+                .filter(tab -> tab.getUserData() == player)
+                .findFirst()
+                .orElse(null);
+
+        if (existingTab != null) {
+            tabs.getSelectionModel().select(existingTab);
+        } else {
+            Label title = new Label(
+                    player.getName() + " " + player.getLastName()
+                            + " - " + row.getTeam().getName()
+            );
+            title.getStyleClass().add("section-title");
+            title.setWrapText(true);
+
+            Label playerId = new Label(
+                    String.format("PLAYER ID  •  #%04d", player.getId())
+            );
+            playerId.getStyleClass().add("player-id-badge");
+
+            Label document = new Label(
+                    "Document: " + player.getDocumentType()
+                            + " " + player.getDocumentNumber()
+            );
+            document.getStyleClass().add("player-info-text");
+            document.setWrapText(true);
+
+            Label birthDate = new Label(
+                    "Birth date: " + player.getBirthDate()
+                            + "  |  Age: "
+                            + java.time.Period.between(
+                            player.getBirthDate(),
+                            LocalDate.now()
+                    ).getYears()
+            );
+            birthDate.getStyleClass().add("player-info-text");
+            birthDate.setWrapText(true);
+
+            VBox personalData = new VBox(8, playerId, document, birthDate);
+            personalData.getStyleClass().add("player-info-card");
+
+            VBox characteristics = createAttributesTable(
+                    "Characteristics",
+                    player.getCharacteristics()
+            );
+
+            VBox statistics = createAttributesTable(
+                    "Imported statistics (source data)",
+                    player.getStatistics()
+            );
+
+
+            HBox tables = new HBox(14, characteristics, statistics);
+
+            characteristics.setMinWidth(0);
+            statistics.setMinWidth(0);
+
+            characteristics.setPrefWidth(0);
+            statistics.setPrefWidth(0);
+
+            characteristics.setMaxWidth(Double.MAX_VALUE);
+            statistics.setMaxWidth(Double.MAX_VALUE);
+
+            HBox.setHgrow(characteristics, javafx.scene.layout.Priority.ALWAYS);
+            HBox.setHgrow(statistics, javafx.scene.layout.Priority.ALWAYS);
+
+            VBox content = new VBox(12, title, personalData, tables);
+            content.setStyle("-fx-padding: 12;");
+            VBox.setVgrow(tables, javafx.scene.layout.Priority.ALWAYS);
+
+            Tab playerTab = new Tab(
+                    player.getName() + " " + player.getLastName(),
+                    content
+            );
+
+            playerTab.setClosable(true);
+            playerTab.setUserData(player);
+
+            tabs.getTabs().add(playerTab);
+            tabs.getSelectionModel().select(playerTab);
+        }
+    }
+
+    private VBox createAttributesTable(
+            String title,
+            Map<String, Integer> attributes) {
+
+        Label heading = new Label(title);
+        heading.getStyleClass().add("ranking-summary");
+        heading.setWrapText(true);
+
+        TableView<Map.Entry<String, Integer>> table = new TableView<>();
+
+        TableColumn<Map.Entry<String, Integer>, String> attributeColumn =
+                rankingColumn(
+                        "Attribute",
+                        entry -> PlayerAttributeFormatter.label(entry.getKey())
+                );
+
+        TableColumn<Map.Entry<String, Integer>, Integer> valueColumn =
+                rankingColumn("Value", entry -> entry.getValue());
+
+        attributeColumn.setMinWidth(150);
+        attributeColumn.setPrefWidth(240);
+
+        valueColumn.setMinWidth(65);
+        valueColumn.setPrefWidth(90);
+
+        table.getColumns().add(attributeColumn);
+        table.getColumns().add(valueColumn);
+
+        if (attributes != null) {
+            table.getItems().setAll(attributes.entrySet());
         }
 
-        reportArea.setText(text.toString());
+        attributeColumn.setSortType(TableColumn.SortType.ASCENDING);
+        table.getSortOrder().add(attributeColumn);
+        table.sort();
+
+        attributeColumn.setSortable(false);
+        valueColumn.setSortable(false);
+
+        attributeColumn.setReorderable(false);
+        valueColumn.setReorderable(false);
+
+        attributeColumn.setResizable(false);
+        valueColumn.setResizable(false);
+
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.getStyleClass().add("ranking-table");
+        table.setPlaceholder(new Label("No data available."));
+
+        VBox container = new VBox(8, heading, table);
+        container.setMinWidth(0);
+        container.setMinHeight(0);
+
+        VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
+
+        return container;
+    }
+
+    private String buildPlayerDetails(PlayerStatsRow row) {
+        Player player = row.getPlayer();
+
+        StringBuilder text = new StringBuilder();
+
+        text.append(player.getName())
+                .append(" ")
+                .append(player.getLastName())
+                .append(" - ")
+                .append(row.getTeam().getName())
+
+                .append("\nID: ")
+                .append(player.getId())
+
+                .append(" | Document: ")
+                .append(player.getDocumentType())
+                .append(" ")
+                .append(player.getDocumentNumber())
+
+                .append("\nBirth date: ")
+                .append(player.getBirthDate())
+
+                .append(" | Age: ")
+                .append(java.time.Period.between(
+                        player.getBirthDate(),
+                        LocalDate.now()
+                ).getYears())
+
+                .append("\n\nCHARACTERISTICS\n")
+                .append(PlayerAttributeFormatter.format(
+                        player.getCharacteristics()
+                ))
+
+                .append("\n\nIMPORTED STATISTICS (SOURCE DATA)\n")
+                .append(PlayerAttributeFormatter.format(
+                        player.getStatistics()
+                ));
+
+        return text.toString();
     }
 
     @FXML
     private void handleRefereesStats() {
-        phaseLabel.setText("Referees Stats");
-        zoneTitleLabel.setVisible(false);
-        showReport();
+        showRanking(
+                "Referees Stats",
+                reportService.getRefereeStats(championship),
 
-        StringBuilder text = new StringBuilder();
+                rankingColumn("Referee",
+                        row -> row.getReferee().getName()
+                                + " " + row.getReferee().getLastName()),
 
-        reportService.getRefereeStats(championship).forEach(row ->
-                text.append(row.getReferee().getName())
-                        .append(" ")
-                        .append(row.getReferee().getLastName())
-                        .append(" - Matches: ")
-                        .append(row.getMatches())
-                        .append(" - Years: ")
-                        .append(row.getYears())
-                        .append("\n")
+                rankingColumn("Matches",
+                        RefereeStatsRow::getMatches),
+
+                rankingColumn("Years of experience",
+                        RefereeStatsRow::getYears)
         );
 
-        text.append("\nAverage years of experience: ")
-                .append(String.format(
-                        "%.2f",
-                        reportService.getAverageRefereeExperience(championship)
-                ))
-                .append(" years\n");
+        Label average = new Label(String.format(
+                "Average years of experience: %.2f years",
+                reportService.getAverageRefereeExperience(championship)
+        ));
 
-        reportArea.setText(text.toString());
+        average.getStyleClass().add("ranking-summary");
+        rankingPanel.getChildren().add(average);
     }
 
     private void setPlayerFilterVisible(boolean visible) {
