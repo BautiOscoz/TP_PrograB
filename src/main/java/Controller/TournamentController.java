@@ -586,7 +586,7 @@ public class TournamentController {
             );
 
             VBox statistics = createAttributesTable(
-                    "Imported statistics (source data)",
+                    "Statistics",
                     player.getStatistics()
             );
 
