@@ -1,6 +1,8 @@
 package Core.classification;
 
 import Core.domain.Match;
+import Core.domain.Player;
+import Core.incidents.Incident;
 import Core.domain.Team;
 import Core.domain.TeamStanding;
 import Core.domain.TournamentZone;
@@ -127,6 +129,7 @@ public class StandingsCalculator {
         // Standings based only on matches between the tied teams.
         Map<Team, TeamStanding> headToHead =
                 buildTable(teams, playedMatches);
+        Map<Team, Integer> fairPlay = calculateFairPlay(teams, playedMatches);
 
         tiedTeams.sort(
                 Comparator.comparing(
@@ -134,9 +137,31 @@ public class StandingsCalculator {
                                         headToHead.get(standing.getTeam()),
                                 SPORTING_ORDER
                         )
+                        .thenComparingInt(standing -> fairPlay.get(standing.getTeam()))
                         .thenComparingInt(
                                 standing -> standing.getTeam().getRanking()
                         )
         );
+    }
+
+    private Map<Team, Integer> calculateFairPlay(List<Team> teams, List<Match> playedMatches) {
+        Map<Player, Team> playerTeams = new LinkedHashMap<>();
+        Map<Team, Integer> points = new LinkedHashMap<>();
+        for (Team team : teams) {
+            points.put(team, 0);
+            for (Player player : team.getPlayers()) {
+                playerTeams.put(player, team);
+            }
+        }
+        // Count all played group matches, not just the head-to-head matches.
+        for (Match match : playedMatches) {
+            for (Incident incident : match.getIncidents()) {
+                Team team = playerTeams.get(incident.getAffectedPlayer());
+                if (team != null) {
+                    points.merge(team, incident.getFairPlayPoints(), Integer::sum);
+                }
+            }
+        }
+        return points;
     }
 }

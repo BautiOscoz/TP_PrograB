@@ -4,7 +4,7 @@ UFASTA · Universidad FASTA · Programación B
 
 Integrantes: Manuel Gonzalez Sueyro, Mauricio Lobos, Valentin Lobos y Enzo acosta.
 
-Docentes: Luis Buffoni y Claufio Gea.
+Docentes: Luis Buffoni y Claudio Gea.
 
 # Introducción
 
@@ -16,9 +16,27 @@ Para resolver estas tareas, el código separa la interfaz gráfica, las reglas d
 
 En las páginas siguientes se explica cómo se conectan estas partes, qué responsabilidad tiene cada clase y cuáles son los métodos que intervienen en las operaciones principales. Los diagramas UML acompañan la descripción para mostrar las relaciones entre los objetos y el recorrido de una acción dentro del programa.
 
+# Glosario del torneo
+
+- **Zona:** grupo de cuatro equipos que se enfrentan entre sí para definir quiénes avanzan a cuartos de final.
+- **Fecha:** conjunto de partidos de una jornada de la fase de grupos. La aplicación permite simular una fecha por vez.
+- **Llave o serie:** enfrentamiento de eliminatorias. Cuartos y semifinales se resuelven en ida y vuelta; la final es un único partido.
+- **Alineación:** selección de once jugadores habilitados, distribuidos según una formación válida.
+- **Resultado administrativo:** resultado asignado cuando uno o ambos equipos no pueden formar una alineación. No genera goles ni minutos ficticios para jugadores.
+- **Tanda administrativa:** tanda de penales que puede ser necesaria si una serie queda empatada después de incorporar un resultado administrativo. Resuelve la clasificación sin agregar otro partido.
+- **Fair Play:** indicador disciplinario calculado a partir de las tarjetas; permite comparar la conducta de los equipos y desempatar la clasificación antes del ranking. Menos puntos significa mejor Fair Play.
+- **Participación temporal:** reconstrucción del intervalo en el que un jugador estuvo en cancha, teniendo en cuenta el ingreso, la sustitución y la expulsión.
+- **Sede:** estadio y ciudad asignados a un encuentro. Los partidos eliminatorios utilizan estadios distintos.
+
 # 1 Estructura y arquitectura
 
 El proyecto utiliza Maven. El código de producción está en src/**main**/java, las vistas y recursos en src/**main**/resources y las pruebas en src/test/java. torneo.json aporta participantes. pom.xml configura Java 24 y declara Gson 2.10.1, PostgreSQL JDBC 42.7.8, JavaFX 21.0.2 y OpenPDF 2.0.3.
+
+## Vista general del sistema
+
+![Arquitectura del sistema](uml/00_arquitectura.svg)
+
+Las flechas indican el sentido de las solicitudes o del flujo de información. Los controladores reciben acciones de la interfaz, coordinan el dominio y consultan los resultados para actualizar las vistas. JSON aporta los participantes, PostgreSQL conserva las sedes y el archivo serializado conserva el avance del torneo.
 
 ## Paquetes
 
@@ -162,7 +180,7 @@ return !referee.getNationality().equals(home.getCountry())
 
 StandingsCalculator considera sólo partidos de grupos jugados entre integrantes de la zona. **TeamStanding**.**registerMatch** acumula partidos, resultados, goles y puntos. La victoria aporta tres puntos, el empate uno y la derrota cero.
 
-El orden principal es puntos, diferencia de gol y goles a favor, de mayor a menor. Si persiste igualdad, se calcula una tabla sólo con los encuentros entre empatados y se repiten esos criterios. Finalmente se utiliza el ranking, con el menor número primero. Clasifican dos por zona.
+El orden principal es puntos, diferencia de gol y goles a favor, de mayor a menor. Si persiste igualdad, se calcula una tabla sólo con los encuentros entre empatados y se repiten esos criterios. Si todavía hay igualdad, se prioriza al equipo con menos puntos de Fair Play: cada amarilla suma 1 y cada roja suma 3. Se acumulan los incidentes de todos los partidos de grupos jugados en la zona, no sólo los enfrentamientos entre empatados. No cuentan partidos sin jugar ni eliminatorias. Si también empatan en Fair Play, se utiliza el ranking, con el menor número primero. Clasifican dos por zona.
 
 ## Eliminatorias
 
@@ -197,16 +215,51 @@ El archivo database/setup.sql prepara una instalación nueva: crea las tablas pa
 
 El script carga los 15 países presentes en torneo.json y 26 ciudades con sus estadios. Esta cantidad cubre los trece encuentros de eliminatorias que requieren sedes distintas. Toda la preparación se ejecuta en una transacción y puede repetirse sin duplicar los datos de ejemplo.
 
-Para instalarla en otra computadora:
+### Paso 1. Crear la base
 
-1. Conectarse al servidor PostgreSQL local desde pgAdmin con el usuario postgres.
-2. Crear una base llamada **Championship**, respetando la C mayúscula. Si se usa SQL, ejecutar CREATE DATABASE "**Championship**"; por separado y fuera de una transacción.
-3. Abrir Query Tool dentro de esa base y ejecutar completo database/setup.sql.
-4. Configurar CHAMPIONSHIP_DB_PASSWORD en las variables de entorno de la ejecución Java con la contraseña del usuario postgres. La conexión apunta a localhost, puerto 5432.
-5. Iniciar GUI.AppLauncher y comprobar la carga de ciudades y estadios.
+En pgAdmin, conectarse al servidor local con el usuario postgres. Abrir Query Tool sobre la base de mantenimiento postgres y ejecutar esta instrucción por separado, fuera de una transacción:
 
-El archivo database/README.md incluye las instrucciones y consultas de comprobación. setup.sql está pensado para una base nueva o una estructura compatible: no migra esquemas antiguos. Si existen nombres duplicados, la creación de índices puede fallar y la transacción se revierte; después de un error se debe ejecutar ROLLBACK antes de reintentar. El script no elimina datos. add_venues.sql conserva su función de agregar sedes a una base ya preparada y no necesita ejecutarse después de setup.sql.
+```sql
+CREATE DATABASE "Championship";
+```
 
+> BASE OBLIGATORIA | Respetar la C mayúscula de **Championship**. Si la base ya existe, omitir su creación. El programa espera PostgreSQL en localhost, puerto 5432.
+
+### Paso 2. Preparar tablas y datos
+
+Abrir Query Tool dentro de **Championship**. Usar Abrir archivo para seleccionar database/setup.sql y ejecutar el archivo completo. El script crea las tablas y carga los datos; no es necesario ejecutar add_venues.sql después.
+
+### Paso 3. Verificar la instalación
+
+Ejecutar estas consultas en **Championship**. En una instalación nueva deben devolver 15 países, 26 ciudades y 26 estadios:
+
+```sql
+SELECT COUNT(*) AS paises FROM pais;
+SELECT COUNT(*) AS ciudades FROM ciudad;
+SELECT COUNT(*) AS estadios FROM estadio;
+```
+
+### Paso 4. Configurar la contraseña
+
+En IntelliJ, abrir Run > Edit Configurations, seleccionar la ejecución de GUI.AppLauncher y agregar la variable en Environment variables. Reemplazar el valor de ejemplo por la contraseña real del usuario postgres:
+
+```text
+CHAMPIONSHIP_DB_PASSWORD=TU_CONTRASEÑA
+```
+
+> CONFIGURACIÓN OBLIGATORIA | Esta variable debe estar disponible en el proceso Java. No se configura dentro de una consulta SQL ni se incorpora al código fuente.
+
+### Paso 5. Iniciar la aplicación
+
+Ejecutar GUI.AppLauncher, crear un torneo y comprobar que la pantalla de sedes muestre ciudades y estadios. Si falla la conexión, revisar el servidor, el nombre de la base, el puerto y la variable de entorno.
+
+> BASES EXISTENTES | setup.sql prepara una base nueva o compatible; no migra esquemas antiguos. Si hay nombres duplicados, la creación de índices puede fallar. Después de un error, ejecutar ROLLBACK antes de corregir la causa y reintentar. El script no elimina datos.
+
+```sql
+ROLLBACK;
+```
+
+El archivo database/README.md conserva las instrucciones de instalación junto al script.
 
 ## Archivo del campeonato
 
@@ -308,492 +361,414 @@ El diagrama resume la simulación de una fecha. La llamada a **MatchSimulator** 
 
 # 10 Catálogo de clases y métodos
 
-El catálogo cubre los archivos Java de producción presentes en la revisión. Las rutas son relativas a la raíz del proyecto. Los accesores simples getX y setX se agrupan: leen o escriben el atributo X. Los métodos destacados expresan comportamiento o consulta relevante. Las firmas completas públicas están disponibles en inventario_clases.json.
+Las fichas se agrupan por paquete y resumen la responsabilidad de cada clase y sus métodos clave. Los DTO y enumeraciones se identifican como estructuras de datos o valores, sin atribuirles operaciones de negocio. Las rutas completas y declaraciones públicas se conservan en el inventario editable.
 
 ## Paquete GUI
 
 ### AppLauncher
 
-Ubicación: src/main/java/GUI/AppLauncher.java
+Punto de entrada de escritorio.
 
-Punto de entrada de escritorio. **main** delega en View para iniciar JavaFX.
+Métodos clave: **main()**
 
 ### View
 
-Ubicación: src/main/java/GUI/View.java
+Carga el menú principal y configura la escena y la ventana JavaFX.
 
-Extiende Application. **start** carga el menú, crea la escena y configura la ventana; **main** inicia el ciclo de JavaFX.
+Métodos clave: **start()** · **main()**
 
 ## Paquete Controller
 
 ### MainMenuController
 
-Ubicación: src/main/java/Controller/MainMenuController.java
+Recibe las acciones del menú.
 
-Recibe las acciones del menú. **handleNewTournament** abre la creación, **handleLoadTournament** recupera el archivo y prepara la pantalla, y **handleExit** cierra la aplicación.
+Métodos clave: **handleNewTournament()** · **handleLoadTournament()**
 
 ### NewTournamentController
 
-Ubicación: src/main/java/Controller/NewTournamentController.java
+Valida el nombre y crea **Championship**.
 
-Valida el nombre y crea **Championship**. **loadVenues** intenta incorporar sedes, openTournament carga el FXML y entrega el dominio al nuevo controlador.
+Métodos clave: **handleCreateTournament()**
 
 ### StadiumController
 
-Ubicación: src/main/java/Controller/StadiumController.java
-
-Clase vacía en la versión revisada. No tiene comportamiento ni participa del flujo de administración actual, que corresponde a VenuesController.
+Clase vacía en la versión revisada.
 
 ### TournamentController
 
-Ubicación: src/main/java/Controller/TournamentController.java
+Coordina la pantalla del torneo.
 
-Coordina la pantalla del torneo. **handleSimulateMatchday** y **handleSimulateKnockoutMatch** ejecutan pasos; **showZone** y **buildKnockoutBracket** presentan resultados. Los manejadores de estadísticas llaman a servicios y **handleGetIdentifications** prepara la exportación en segundo plano. **setTournament** conecta la instancia del dominio y **saveTournament** conserva el estado.
+Métodos clave: **setTournament()** · **handleSimulateMatchday()** · **handleSimulateKnockoutMatch()**
 
 ### VenuesController
 
-Ubicación: src/main/java/Controller/VenuesController.java
+Administra ciudades y estadios.
 
-Administra ciudades y estadios. Los manejadores **handleAdd**..., **handleUpdate**... y **handleDelete**... validan formularios y llaman a repositorios; refreshData recarga listas y **setTournament** conserva el contexto al navegar.
+Métodos clave: **handleAddCity()** · **handleUpdateStadium()** · **handleDeleteCity()**
 
 ## Paquete Core.Run
 
 ### Championship
 
-Ubicación: src/main/java/Core/Run/Championship.java
+Conserva el estado del torneo y coordina el calendario, la simulación y el avance entre etapas.
 
-Estado y coordinación del campeonato. Mantiene colecciones, etapa, clasificados, campeón y tanda pendiente. Delega calendario, simulación y clasificación. **readResolve** reconstruye servicios al recuperar un archivo.
+Métodos clave: **simulateNextMatchday()** · **simulateNextKnockoutMatch()** · **getStandings()**
 
 ## Paquete Core.domain
 
 ### City
 
-Ubicación: src/main/java/Core/domain/City.java
-
-Entidad de ciudad con id long, nombre y referencia a **Country**. Sus accesores permiten consulta y edición; **toString** facilita la presentación en controles.
+Entidad de ciudad con id long, nombre y referencia a **Country**.
 
 ### Coach
 
-Ubicación: src/main/java/Core/domain/Coach.java
-
-Especialización de **Person** con nacionalidad y títulos ganados. **getTitlesWon** aporta el dato que **Team** transforma en parte de su fuerza competitiva.
+Especialización de **Person** con nacionalidad y títulos ganados.
 
 ### Country
 
-Ubicación: src/main/java/Core/domain/Country.java
-
-Objeto de país identificado por su nombre. **setName** rechaza texto vacío y elimina espacios extremos. **equals** y **hashCode** comparan sin distinguir mayúsculas; **toString** devuelve el nombre.
+Objeto de país identificado por su nombre.
 
 ### FinalMatch
 
-Ubicación: src/main/java/Core/domain/FinalMatch.java
+Representa la final única.
 
-Representa la final única. Especializa descripción, **asFinal** y el indicador de resolución por penales.
+Métodos clave: **asFinal()** · **getStageDescription()** · **isSettledByPenalties()**
 
 ### FirstLegMatch
 
-Ubicación: src/main/java/Core/domain/FirstLegMatch.java
+Representa la ida de una serie.
 
-Representa la ida de una serie. Especializa la descripción y **asFirstLeg** retorna la instancia para consultas sobre cruces.
+Métodos clave: **asFirstLeg()** · **getStageDescription()**
 
 ### GroupMatch
 
-Ubicación: src/main/java/Core/domain/GroupMatch.java
+Especializa **Match** con número de fecha.
 
-Especializa **Match** con número de fecha. **getStageDescription** **describe** la etapa, **isGroupStage** devuelve verdadero y **getMatchday** y **setMatchday** administran la fecha de grupos.
+Métodos clave: **isGroupStage()** · **getStageDescription()**
 
 ### Lineup
 
-Ubicación: src/main/java/Core/domain/Lineup.java
+Selecciona los once titulares habilitados que cumplen los cupos de una formación.
 
-Selección concreta de titulares para una formación. **canUseFormation** comprueba disponibilidad por posición; selectBestLineup elige mejores valoraciones; **getGoalkeeper** y **getOutfieldPlayers** separan roles. **getPlayers** devuelve una lista no modificable.
+Métodos clave: **canUseFormation()** · **getGoalkeeper()** · **getOutfieldPlayers()**
 
 ### Match
 
-Ubicación: src/main/java/Core/domain/Match.java
+Representa el estado común de un partido: resultado, alineaciones, incidentes y jugadores presentes en cada minuto.
 
-Base abstracta del encuentro. Conserva participantes, árbitro, fecha, sede, resultado, alineaciones e incidentes. **addIncident** ordena por minuto; **getPlayersOnField** reconstruye una copia de la alineación; **complete** valida y cierra; **awardForfeit** y **awardRandomForfeit** registran resoluciones administrativas.
+Métodos clave: **getPlayersOnField()** · **addIncident()** · **complete()**
 
 ### ParticipationTimeline
 
-Ubicación: src/main/java/Core/domain/ParticipationTimeline.java
+Cálculo temporal sin modificar jugadores.
 
-Cálculo temporal sin modificar jugadores. **enter** registra ingreso, **leave** salida y **minutesPlayed** produce minutos por jugador; el ingreso al minuto 90 conserva participación con cero minutos.
+Métodos clave: **enter()** · **leave()** · **minutesPlayed()**
 
 ### Person
 
-Ubicación: src/main/java/Core/domain/Person.java
-
-Base abstracta de participantes. Valida nombre, apellido, documento y nacimiento en el constructor. Los accesores exponen los datos comunes y varias propiedades mantienen setters.
+Reúne la identidad y los datos personales compartidos por jugadores, entrenadores y árbitros.
 
 ### Player
 
-Ubicación: src/main/java/Core/domain/Player.java
+Especialización de **Person** con camiseta, posición, suspensión, características y estadísticas.
 
-Especialización de **Person** con camiseta, posición, suspensión, características y estadísticas. **getAverageRating** promedia características y **serveSuspensionIfNeeded** cumple una sanción pendiente.
+Métodos clave: **isSuspended()** · **serveSuspensionIfNeeded()** · **getAverageRating()**
 
 ### Referee
 
-Ubicación: src/main/java/Core/domain/Referee.java
-
-Especialización de **Person** con nacionalidad y experiencia. Los datos sirven para elegibilidad y reportes de árbitros.
+Especialización de **Person** con nacionalidad y experiencia.
 
 ### SecondLegMatch
 
-Ubicación: src/main/java/Core/domain/SecondLegMatch.java
+Representa la vuelta y conserva datos del resultado de ida y la resolución por penales.
 
-Representa la vuelta y conserva datos del resultado de ida y la resolución por penales. **asSecondLeg** permite consultar esa variante y **isSettledByPenalties** informa el modo de definición.
+Métodos clave: **asSecondLeg()** · **getStageDescription()** · **isSettledByPenalties()**
 
 ### Stadium
 
-Ubicación: src/main/java/Core/domain/Stadium.java
-
-Entidad de estadio con id long, nombre y referencia a **City**. Su país se obtiene a través de la ciudad. **toString** prepara una etiqueta legible.
+Entidad de estadio con id long, nombre y referencia a **City**.
 
 ### Team
 
-Ubicación: src/main/java/Core/domain/Team.java
+Contiene identidad, nombre, país, ranking, entrenador y plantel.
 
-Contiene identidad, nombre, país, ranking, entrenador y plantel. **addPlayer** controla nulos y límite de 18; **getAveragePlayerRating** y **getCompetitiveStrength** calculan fuerza; **getPlayers** protege la lista.
+Métodos clave: **addPlayer()** · **getAveragePlayerRating()** · **getCompetitiveStrength()**
 
 ### TeamStanding
 
-Ubicación: src/main/java/Core/domain/TeamStanding.java
+Acumulador de posiciones de un equipo.
 
-Acumulador de posiciones de un equipo. **registerMatch** actualiza puntos, partidos, resultados y goles. **getGoalDifference** calcula goles a favor menos goles en contra.
+Métodos clave: **registerMatch()** · **getGoalDifference()**
 
 ### TournamentZone
 
-Ubicación: src/main/java/Core/domain/TournamentZone.java
+Agrupa equipos de una zona.
 
-Agrupa equipos de una zona. **addTeam** incorpora integrantes y sus consultas permiten obtener nombre y equipos para calendario y clasificación.
+Métodos clave: **addTeam()**
 
 ## Paquete Core.incidents
 
 ### Goal
 
-Ubicación: src/main/java/Core/incidents/Goal.java
+Registra autor, arquero, penal y autogol.
 
-Registra autor, arquero, penal y autogol. **getScoringPlayer** devuelve null para autogoles, evitando acreditarlos al ranking personal. **isMatchGoal** e **isPenaltyGoal** distinguen la contabilización.
+Métodos clave: **getParticipant()** · **isPenalty()** · **isOwnGoal()**
 
 ### Incident
 
-Ubicación: src/main/java/Core/incidents/Incident.java
+Define el contrato común de los eventos y sus efectos sobre alineaciones y participación.
 
-Base abstracta de eventos con minuto final. Define descripción y métodos polimórficos para alineación, participación y consultas de reportes. Las respuestas neutras por defecto permiten que cada subclase redefina lo pertinente.
+Métodos clave: **applyToParticipation()** · **applyToLineup()** · **getParticipant()**
 
 ### PenaltyShootout
 
-Ubicación: src/main/java/Core/incidents/PenaltyShootout.java
+Representa un lanzamiento de tanda, su ejecutante y conversión.
 
-Representa un lanzamiento de tanda, su ejecutante y conversión. **isShootoutPenalty**, **getPenaltyTaker** e **isPenaltyScored** permiten resolver el ganador sin confundirlo con goles del partido.
+Métodos clave: **getParticipant()** · **isScored()** · **isShootoutPenalty()**
 
 ### RedCard
 
-Ubicación: src/main/java/Core/incidents/RedCard.java
+Registra al expulsado.
 
-Registra al expulsado. **applyToLineup** lo quita de la copia de jugadores, **applyToParticipation** cierra sus minutos y **getFairPlayPoints** aporta la penalización de la roja.
+Métodos clave: **applyToParticipation()** · **applyToLineup()** · **getFairPlayPoints()**
 
 ### Substitution
 
-Ubicación: src/main/java/Core/incidents/Substitution.java
+Registra jugador saliente y entrante.
 
-Registra jugador saliente y entrante. **applyToLineup** reemplaza al jugador; **applyToParticipation** registra los dos instantes. **getParticipant** utiliza al entrante para identificar el equipo al mostrar el evento.
+Métodos clave: **getParticipant()** · **applyToParticipation()** · **applyToLineup()**
 
 ### YellowCard
 
-Ubicación: src/main/java/Core/incidents/YellowCard.java
+Registra al amonestado.
 
-Registra al amonestado. Identifica tarjeta amarilla y aporta su puntaje de Fair Play. No expulsa por sí sola; el simulador determina cuándo una segunda amarilla genera **RedCard**.
+Métodos clave: **getFairPlayPoints()** · **isYellowCard()**
 
 ## Paquete Core.enums
 
 ### FormationType
 
-Ubicación: src/main/java/Core/enums/FormationType.java
-
-Enum de esquemas 4-3-3, 4-4-2, 3-5-2 y 4-5-1. Conserva cantidades de defensores, mediocampistas y delanteros; los getters exponen esos cupos.
+Enum de esquemas 4-3-3, 4-4-2, 3-5-2 y 4-5-1.
 
 ### Position
 
-Ubicación: src/main/java/Core/enums/Position.java
-
-Enum de posiciones admitidas: arquero, defensor, mediocampista y delantero. Se utiliza para validar planteles, elegir titulares y filtrar estadísticas.
+Enum de posiciones admitidas: arquero, defensor, mediocampista y delantero.
 
 ### TournamentStage
 
-Ubicación: src/main/java/Core/enums/TournamentStage.java
-
-Enum de las etapas GROUP_STAGE, QUARTER_FINALS, SEMI_FINALS, FINAL y FINISHED. El coordinador y la interfaz lo usan para controlar avance y acciones disponibles.
+Enum de las etapas GROUP_STAGE, QUARTER_FINALS, SEMI_FINALS, FINAL y FINISHED.
 
 ## Paquete Core.loader
 
 ### TournamentData
 
-Ubicación: src/main/java/Core/loader/TournamentData.java
-
-Resultado de carga con equipos, árbitros y países. Es el objeto de intercambio entre loader, validador y **Championship**.
+Resultado de carga con equipos, árbitros y países.
 
 ### TournamentLoader
 
-Ubicación: src/main/java/Core/loader/TournamentLoader.java
+**load** lee el archivo, deserializa con Gson, transforma DTO a dominio y valida.
 
-**load** lee el archivo, deserializa con Gson, transforma DTO a dominio y valida. mapTeams, mapReferees, mapPlayer y mapCoach construyen entidades; parseDate y mapPosition convierten formatos; countryFor reutiliza países.
+Métodos clave: **load()**
 
 ### TournamentValidator
 
-Ubicación: src/main/java/Core/loader/TournamentValidator.java
+**validate** produce errores de estructura y plantel; **requireValid** lanza una excepción si hay errores.
 
-**validate** produce errores de estructura y plantel; **requireValid** lanza una excepción si hay errores. **findDuplicateDocuments** proporciona un diagnóstico separado de documentos repetidos.
+Métodos clave: **validate()** · **requireValid()** · **findDuplicateDocuments()**
 
 ### VenueLoader
 
-Ubicación: src/main/java/Core/loader/VenueLoader.java
+Interfaz funcional con **load**(countries).
 
-Interfaz funcional con **load**(countries). Su record Venues contiene listas copiadas de ciudades y estadios. Permite sustituir PostgreSQL por una fuente de pruebas.
-
-Operación del contrato: **load**(List<**Country**>). El record Venues expone cities() y stadiums().
+Métodos clave: **load()**
 
 ## Paquete Core.dto
 
 ### CoachDto
 
-Ubicación: src/main/java/Core/dto/CoachDto.java
-
-Datos externos del entrenador, incluidos datos personales, nacionalidad y títulos. Se transforma en **Coach**.
-
-Campos de intercambio: person (PersonDto), country (**CountryDto**), titlesWon (int).
+Datos externos del entrenador, incluidos datos personales, nacionalidad y títulos.
 
 ### CountryDto
 
-Ubicación: src/main/java/Core/dto/CountryDto.java
-
-Representación de país utilizada por el adaptador Gson. Permite transformar el valor externo en **Country** reutilizado por nombre.
-
-Campos de intercambio: name (String).
+Representación de país utilizada por el adaptador Gson.
 
 ### PersonDto
 
-Ubicación: src/main/java/Core/dto/PersonDto.java
-
-Datos de identificación externos: tipo y número de documento, nombre completo y fecha como texto. TournamentLoader los convierte al modelo.
-
-Campos de intercambio: documentType (String), documentNumber (int), fullName (String), birthDate (String).
+Datos de identificación externos: tipo y número de documento, nombre completo y fecha como texto.
 
 ### PlayerDto
 
-Ubicación: src/main/java/Core/dto/PlayerDto.java
-
-Datos externos de posición, persona, características y estadísticas. Compone PersonDto; no hereda de **Person** del dominio.
-
-Campos de intercambio: position (String), person (PersonDto), characteristics (Map<String, Integer>), statistics (Map<String, Integer>).
+Datos externos de posición, persona, características y estadísticas.
 
 ### PlayersDto
 
-Ubicación: src/main/java/Core/dto/PlayersDto.java
-
 Envoltorio de la lista de PlayerDto correspondiente a los jugadores del JSON.
-
-Campos de intercambio: player (List<PlayerDto>).
 
 ### RefereeDto
 
-Ubicación: src/main/java/Core/dto/RefereeDto.java
-
-Datos externos del árbitro, incluidos persona, nacionalidad y experiencia. Se transforma en **Referee**.
-
-Campos de intercambio: person (PersonDto), country (**CountryDto**), refereeYears (int).
+Datos externos del árbitro, incluidos persona, nacionalidad y experiencia.
 
 ### RefereesDto
 
-Ubicación: src/main/java/Core/dto/RefereesDto.java
-
 Envoltorio de la lista de RefereeDto del archivo.
-
-Campos de intercambio: referee (List<RefereeDto>).
 
 ### SquadDto
 
-Ubicación: src/main/java/Core/dto/SquadDto.java
-
 Agrupa al entrenador y al contenedor de jugadores del plantel recibido.
-
-Campos de intercambio: players (PlayersDto), coach (CoachDto).
 
 ### TeamDto
 
-Ubicación: src/main/java/Core/dto/TeamDto.java
-
-Datos externos de un equipo: nombre, país, ranking y plantel. El cargador los convierte en **Team**, **Coach** y **Player**.
-
-Campos de intercambio: name (String), country (**CountryDto**), ranking (int), squad (SquadDto).
+Datos externos de un equipo: nombre, país, ranking y plantel.
 
 ### TeamsDto
 
-Ubicación: src/main/java/Core/dto/TeamsDto.java
-
 Envoltorio de la lista de TeamDto tal como aparece en el archivo externo.
-
-Campos de intercambio: team (List<TeamDto>).
 
 ### TournamentDto
 
-Ubicación: src/main/java/Core/dto/TournamentDto.java
-
 Agrupa las estructuras teams y referees, mapeadas desde equipos y arbitros.
-
-Campos de intercambio: teams (TeamsDto), referees (RefereesDto).
 
 ### TournamentRootDto
 
-Ubicación: src/main/java/Core/dto/TournamentRootDto.java
-
-Nodo raíz del JSON. El campo tournament corresponde a la clave torneo y contiene TournamentDto.
-
-Campos de intercambio: tournament (TournamentDto).
+Nodo raíz del JSON.
 
 ## Paquete Core.scheduling
 
 ### TournamentScheduler
 
-Ubicación: src/main/java/Core/scheduling/TournamentScheduler.java
+Ordena y sortea zonas equilibradas, construye fechas y cruces y asigna árbitros elegibles.
 
-Ordena y sortea zonas equilibradas, construye fechas y cruces y asigna árbitros elegibles. Devuelve calendarios al coordinador sin ejecutar partidos.
+Métodos clave: **drawBalancedZones()** · **generateGroupMatches()** · **isRefereeEligible()**
 
 ## Paquete Core.simulation
 
 ### MatchSimulator
 
-Ubicación: src/main/java/Core/simulation/MatchSimulator.java
+**simulate** selecciona formaciones, resuelve disponibilidad, calcula marcador, genera incidentes y cierra el encuentro.
 
-**simulate** selecciona formaciones, resuelve disponibilidad, calcula marcador, genera incidentes y cierra el encuentro. **chooseRandomFormation** filtra esquemas y **sampleGoals** muestrea goles. **prepareAdministrativeShootout** habilita una tanda luego de una resolución administrativa.
+Métodos clave: **simulate()** · **prepareAdministrativeShootout()**
 
 ### PenaltyShootoutSimulator
 
-Ubicación: src/main/java/Core/simulation/PenaltyShootoutSimulator.java
+**simulate** obtiene jugadores presentes al final y ejecuta cinco lanzamientos más muerte súbita si hace falta.
 
-**simulate** obtiene jugadores presentes al final y ejecuta cinco lanzamientos más muerte súbita si hace falta. simulatePenalty usa probabilidad 0,75 y agrega cada **PenaltyShootout** al encuentro.
+Métodos clave: **simulate()**
 
 ## Paquete Core.classification
 
 ### KnockoutResolver
 
-Ubicación: src/main/java/Core/classification/KnockoutResolver.java
+Servicio de consulta para series y final.
 
-Servicio de consulta para series y final. **getSeriesPoints** y **getWeightedGoalDifference** aplican criterios; **seriesWinnerBeforePenalties** informa si falta tanda; **recordedPenaltyWinner** cuenta los penales ya registrados. No sortea resultados al consultar.
+Métodos clave: **seriesWinnerBeforePenalties()** · **getSeriesPoints()** · **getWeightedGoalDifference()**
 
 ### StandingsCalculator
 
-Ubicación: src/main/java/Core/classification/StandingsCalculator.java
+**calculate** genera posiciones por zona desde partidos jugados.
 
-**calculate** genera posiciones por zona desde partidos jugados. **buildTable** acumula resultados y resolveTie arma la tabla entre empatados antes del criterio final de ranking.
+Métodos clave: **calculate()**
 
 ## Paquete Core.persistance
 
 ### ChampionshipRepository
 
-Ubicación: src/main/java/Core/persistance/ChampionshipRepository.java
+Serializa el campeonato en un temporal y reemplaza el destino de forma atómica.
 
-Serializa el campeonato en un temporal y reemplaza el destino de forma atómica. **save** informa errores, **load** recupera o devuelve null y **exists** comprueba el archivo. Permite ruta predeterminada o ruta recibida en constructor.
+Métodos clave: **save()** · **load()** · **exists()**
 
 ## Paquete Infrastructure.database
 
 ### CityRepository
 
-Ubicación: src/main/java/Infrastructure/database/CityRepository.java
+Consulta y administra ciudades en PostgreSQL; impide borrar ciudades con estadios.
 
-Acceso SQL a ciudades. **findAll** relaciona países con el catálogo de objetos; **create** inserta y recupera id; **update** modifica; **delete** rechaza ciudades con estadios y maneja transacción.
+Métodos clave: **findAll()** · **create()** · **update()**
 
 ### CityRepositoryTest
 
-Ubicación: src/main/java/Infrastructure/database/CityRepositoryTest.java
+Ejecutable manual de comprobación del repositorio de ciudades.
 
-Ejecutable manual de comprobación del repositorio de ciudades. Requiere base configurada; revisar las operaciones antes de ejecutarlo.
+Métodos clave: **main()**
 
 ### DatabaseConnection
 
-Ubicación: src/main/java/Infrastructure/database/DatabaseConnection.java
+Utilidad final sin instancias.
 
-Utilidad final sin instancias. **connect** obtiene contraseña del entorno, carga el driver y abre la conexión JDBC.
+Métodos clave: **connect()**
 
 ### DatabaseTest
 
-Ubicación: src/main/java/Infrastructure/database/DatabaseTest.java
+Ejecutable manual para comprobar la conexión PostgreSQL.
 
-Ejecutable manual para comprobar la conexión PostgreSQL. No forma parte del recorrido normal de JavaFX.
+Métodos clave: **main()**
 
 ### DatabaseVenueLoader
 
-Ubicación: src/main/java/Infrastructure/database/DatabaseVenueLoader.java
-
 Implementación de VenueLoader que consulta CityRepository y después StadiumRepository y entrega ambas listas de sedes.
+
+Métodos clave: **load()**
 
 ### StadiumRepository
 
-Ubicación: src/main/java/Infrastructure/database/StadiumRepository.java
+Consulta y administra estadios en PostgreSQL, vinculados a una ciudad.
 
-Acceso SQL a estadios. **findAll** relaciona cada estadio con una ciudad conocida y **create**, **update** y **delete** implementan ABM mediante parámetros.
+Métodos clave: **findAll()** · **create()** · **update()**
 
 ### StadiumRepositoryTest
 
-Ubicación: src/main/java/Infrastructure/database/StadiumRepositoryTest.java
+Ejecutable manual de comprobación del repositorio de estadios.
 
-Ejecutable manual de comprobación del repositorio de estadios. Requiere base configurada; revisar las operaciones antes de ejecutarlo.
+Métodos clave: **main()**
 
 ## Paquete Core.report
 
 ### GroupEvolutionReportService
 
-Ubicación: src/main/java/Core/report/GroupEvolutionReportService.java
-
 **buildReport** ordena encuentros por fecha, reconstruye tablas antes y después de los resultados y genera un informe textual de evolución de la zona.
+
+Métodos clave: **buildReport()**
 
 ### IdentificationPdfService
 
-Ubicación: src/main/java/Core/report/IdentificationPdfService.java
+**generate** produce credenciales y devuelve **Result**(total, missingPhotos).
 
-**generate** produce credenciales y devuelve **Result**(total, missingPhotos). Participant organiza persona, rol y detalles. **findPhoto** elige fotografía o avatar y reutiliza imágenes; cell crea celdas con formato. El servicio no depende de JavaFX.
-
-**Result** expone total() y missingPhotos(). Participant es un record privado de apoyo a la exportación.
+Métodos clave: **generate()**
 
 ### IncidentFormatter
 
-Ubicación: src/main/java/Core/report/IncidentFormatter.java
+**describe** combina la descripción del evento y el equipo de su participante.
 
-**describe** combina la descripción del evento y el equipo de su participante. Centraliza el texto utilizado por la interfaz.
+Métodos clave: **describe()**
 
 ### MatchDetailsFormatter
 
-Ubicación: src/main/java/Core/report/MatchDetailsFormatter.java
+**title** identifica el encuentro y **format** presenta resultado, contexto, alineaciones e incidentes existentes.
 
-**title** identifica el encuentro y **format** presenta resultado, contexto, alineaciones e incidentes existentes. Las consultas no vuelven a simular.
+Métodos clave: **title()** · **format()**
 
 ### PlayerAttributeFormatter
 
-Ubicación: src/main/java/Core/report/PlayerAttributeFormatter.java
-
 **format** presenta mapas de atributos con etiquetas conocidas en inglés y conserva claves adicionales del archivo de entrada.
+
+Métodos clave: **format()**
 
 ### TournamentReportService
 
-Ubicación: src/main/java/Core/report/TournamentReportService.java
+Produce filas de goleadores, participación, Fair Play, equipos, jugadores y árbitros.
 
-Produce filas de goleadores, participación, Fair Play, equipos, jugadores y árbitros. indexTeams construye pertenencia y **collectPlayerTotals** acumula estadísticas por solicitud. Sus clases internas Row contienen los datos que consume la interfaz.
-
-Tipos internos de salida: **TopScorerRow**, **ParticipationRow**, **FairPlayRow**, **TeamStatsRow**, **PlayerStatsRow** y **RefereeStatsRow**. Sus getters exponen los datos de cada fila. PlayerTotals es un acumulador privado temporal.
+Métodos clave: **getTopScorers()** · **getPlayerStats()** · **getParticipation()**
 
 ## Paquete Utils
 
 ### Paths
 
-Ubicación: src/main/java/Utils/Paths.java
-
-Contiene GESTIONAR_INITIAL_MENU_VIEW con la ruta del menú. Es una utilidad mínima y no coordina la navegación actual.
+Contiene GESTIONAR_INITIAL_MENU_VIEW con la ruta del menú.
 
 
 # 11 Pruebas y verificación
 
-Las pruebas actuales son clases ejecutables mediante **main**. No se debe asumir que mvn test las ejecuta como una batería JUnit: pom.xml no declara JUnit. Los auxiliares de Infrastructure.database requieren revisar la base y la operación que realizan antes de ejecutarlos.
+> PRUEBAS EJECUTABLES | Las pruebas tienen su propio método **main**. pom.xml no declara JUnit: ejecutar mvn test no garantiza ejecutar estas comprobaciones. Se deben lanzar las clases de prueba correspondientes. Los auxiliares de Infrastructure.database requieren revisar la base y la operación que realizan antes de ejecutarlos.
 
 - ChampionshipTest: construcción y simulación general.
 - StagedSimulationTest: avance por fechas, eliminatorias, tandas y recuperación serializada.

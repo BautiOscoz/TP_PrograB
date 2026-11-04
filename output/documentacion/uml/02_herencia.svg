@@ -2,7 +2,7 @@
 <rect width="100%" height="100%" fill="white"/>
 <rect x="320" y="15" width="360" height="180" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
 <rect x="320" y="15" width="360" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
-<text x="500.0" y="50" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">«abstract» Person</text>
+<text x="500.0" y="50" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">abstract Person</text>
 <text x="332" y="104" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- name, lastName: String</text>
 <text x="332" y="134" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- documentNumber: int</text>
 <polyline points="320,143 680,143" fill="none" stroke="#596976" stroke-width="1.5"/>
@@ -27,7 +27,7 @@
 <polygon points="491.5,212.0 500,195 508.5,212.0" fill="white" stroke="#596976"/>
 <rect x="300" y="535" width="400" height="150" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
 <rect x="300" y="535" width="400" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
-<text x="500.0" y="570" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">«abstract» Match</text>
+<text x="500.0" y="570" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">abstract Match</text>
 <text x="312" y="624" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- played: boolean</text>
 <polyline points="300,633 700,633" fill="none" stroke="#596976" stroke-width="1.5"/>
 <text x="312" y="669" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ getStageDescription()</text>

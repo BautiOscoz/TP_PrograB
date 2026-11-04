@@ -2,7 +2,7 @@
 <rect width="100%" height="100%" fill="white"/>
 <rect x="350" y="20" width="400" height="105" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
 <rect x="350" y="20" width="400" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
-<text x="550.0" y="55" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">«interface» VenueLoader</text>
+<text x="550.0" y="55" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">interface VenueLoader</text>
 <text x="362" y="109" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ load(countries): Venues</text>
 <rect x="330" y="270" width="440" height="105" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
 <rect x="330" y="270" width="440" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>

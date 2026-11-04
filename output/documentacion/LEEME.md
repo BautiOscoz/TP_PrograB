@@ -2,6 +2,8 @@
 
 Texto editable: documentacion_tecnica.md.
 
-Diagramas: carpeta uml, con imágenes PNG, vistas vectoriales SVG y fuente PlantUML.
+Diagramas: carpeta uml, con seis vistas en SVG y PNG y un diagrama completo en PlantUML. El PDF incorpora las vistas SVG como gráficos vectoriales; las letras y líneas conservan nitidez al ampliar.
 
-El inventario de clases contiene las declaraciones públicas extraídas del código.
+El catálogo presenta fichas de clases agrupadas por paquete. El inventario contiene las rutas y declaraciones públicas extraídas del código.
+
+La carpeta database incluye el script de instalación y sus instrucciones.

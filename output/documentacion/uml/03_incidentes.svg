@@ -2,7 +2,7 @@
 <rect width="100%" height="100%" fill="white"/>
 <rect x="300" y="20" width="500" height="210" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
 <rect x="300" y="20" width="500" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
-<text x="550.0" y="55" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">«abstract» Incident</text>
+<text x="550.0" y="55" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">abstract Incident</text>
 <text x="312" y="109" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- minute: int {final}</text>
 <polyline points="300,118 800,118" fill="none" stroke="#596976" stroke-width="1.5"/>
 <text x="312" y="154" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ getDescription()</text>
@@ -30,7 +30,7 @@
 <polygon points="541.5,247.0 550,230 558.5,247.0" fill="white" stroke="#596976"/>
 <rect x="890" y="430" width="200" height="75" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
 <rect x="890" y="430" width="200" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
-<text x="990.0" y="465" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">PenaltyShootout</text>
+<text x="990.0" y="462" font-family="Arial" font-size="20" font-weight="bold" fill="#1d2e3b" text-anchor="middle">PenaltyShootout</text>
 <polyline points="990,430 990,360 550,360 550,230" fill="none" stroke="#596976" stroke-width="1.5"/>
 <polygon points="541.5,247.0 550,230 558.5,247.0" fill="white" stroke="#596976"/>
 <text x="50" y="610" font-family="Arial" font-size="30" font-weight="bold" fill="#1d2e3b" text-anchor="start">Comportamientos polimórficos</text>

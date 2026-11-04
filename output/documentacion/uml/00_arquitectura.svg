@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="810" viewBox="0 0 1000 810">
+<rect width="100%" height="100%" fill="white"/>
+<rect x="300" y="10" width="400" height="105" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="300" y="10" width="400" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="500.0" y="45" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Vistas JavaFX / FXML</text>
+<text x="312" y="99" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Acciones del usuario y resultados</text>
+<rect x="300" y="200" width="400" height="105" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="300" y="200" width="400" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="500.0" y="235" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Controladores</text>
+<text x="312" y="289" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Coordinan acciones y refrescan vistas</text>
+<rect x="300" y="400" width="400" height="105" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="300" y="400" width="400" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="500.0" y="435" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Championship y dominio</text>
+<text x="312" y="489" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Reglas, simulación y clasificación</text>
+<polyline points="430,115 430,200" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="435.5,189.0 430,200 424.5,189.0" fill="#596976" stroke="#596976"/>
+<text x="130" y="168" font-family="Arial" font-size="23" font-weight="normal" fill="#1d2e3b" text-anchor="start">acciones</text>
+<polyline points="570,200 570,115" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="564.5,126.0 570,115 575.5,126.0" fill="#596976" stroke="#596976"/>
+<text x="600" y="168" font-family="Arial" font-size="23" font-weight="normal" fill="#1d2e3b" text-anchor="start">actualiza vistas</text>
+<polyline points="430,305 430,400" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="435.5,389.0 430,400 424.5,389.0" fill="#596976" stroke="#596976"/>
+<text x="80" y="367" font-family="Arial" font-size="23" font-weight="normal" fill="#1d2e3b" text-anchor="start">solicitudes / consultas</text>
+<polyline points="570,400 570,305" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="564.5,316.0 570,305 575.5,316.0" fill="#596976" stroke="#596976"/>
+<text x="600" y="367" font-family="Arial" font-size="23" font-weight="normal" fill="#1d2e3b" text-anchor="start">estado / resultados</text>
+<rect x="15" y="640" width="300" height="135" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="15" y="640" width="300" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="165.0" y="675" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">JSON + Gson</text>
+<text x="27" y="729" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">TournamentLoader</text>
+<text x="27" y="759" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Participantes de torneo.json</text>
+<rect x="350" y="640" width="300" height="135" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="350" y="640" width="300" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="500.0" y="675" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">PostgreSQL + JDBC</text>
+<text x="362" y="729" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Repositorios / VenueLoader</text>
+<text x="362" y="759" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Ciudades y estadios</text>
+<rect x="685" y="640" width="300" height="135" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="685" y="640" width="300" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="835.0" y="675" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Archivo serializado</text>
+<text x="697" y="729" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">ChampionshipRepository</text>
+<text x="697" y="759" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">Avance en campeonato.dat</text>
+<polyline points="165,640 165,560 400,560 400,505" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="394.5,516.0 400,505 405.5,516.0" fill="#596976" stroke="#596976"/>
+<polyline points="500,640 500,505" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="494.5,516.0 500,505 505.5,516.0" fill="#596976" stroke="#596976"/>
+<polyline points="650,305 940,305 940,580 835,580 835,640" fill="none" stroke="#596976" stroke-width="1.5"/>
+<polygon points="840.5,629.0 835,640 829.5,629.0" fill="#596976" stroke="#596976"/>
+<text x="715" y="541" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">guarda / recupera</text>
+</svg>
