@@ -96,12 +96,11 @@ public abstract class Match implements Serializable {
         List<Player> playersOnField =
                 new ArrayList<>(initialLineup.getPlayers());
 
-        for (Incident incident : incidents) {
-            if (incident.getMinute() > minute) {
-                break;
-            }
-
-            incident.applyToLineup(team, playersOnField);
+        int index = 0;
+        while (index < incidents.size()
+                && incidents.get(index).getMinute() <= minute) {
+            incidents.get(index).applyToLineup(team, playersOnField);
+            index++;
         }
 
         return Collections.unmodifiableList(playersOnField);

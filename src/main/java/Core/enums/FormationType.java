@@ -1,10 +1,10 @@
 package Core.enums;
 
 public enum FormationType {
-    FOUR_THREE_THREE(4, 3, 3), // 4 defensores, 3 mediocampistas, 3 delanteros
-    FOUR_FOUR_TWO(4, 4, 2),    // 4 defensores, 4 mediocampistas, 2 delanteros
-    THREE_FIVE_TWO(3, 5, 2),   // 3 defensores, 5 mediocampistas, 2 delanteros
-    FOUR_FIVE_ONE(4, 5, 1);    // 4 defensores, 5 mediocampistas, 1 delantero
+    FOUR_THREE_THREE(4, 3, 3), // 4 defenders, 3 midfielders, 3 forwards
+    FOUR_FOUR_TWO(4, 4, 2),    // 4 defenders, 4 midfielders, 2 forwards
+    THREE_FIVE_TWO(3, 5, 2),   // 3 defenders, 5 midfielders, 2 forwards
+    FOUR_FIVE_ONE(4, 5, 1);    // 4 defenders, 5 midfielders, 1 forward
 
     private final int defenders;
     private final int midfielders;

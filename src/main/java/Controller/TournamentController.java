@@ -483,7 +483,7 @@ public class TournamentController {
             return;
         }
 
-        // Seleccionar carpeta de fotografías.
+        // Select the photographs folder.
         showInformation("Participant photographs",
                 "Name each photograph with the person's document number, for example 12345678.jpg. "
                         + "JPG, JPEG and PNG are supported. Missing photos use a sample illustration and are reported in the result.");
@@ -501,7 +501,7 @@ public class TournamentController {
             return;
         }
 
-        // Seleccionar dónde guardar el PDF.
+        // Select where to save the PDF.
         FileChooser chooser = new FileChooser();
 
         chooser.setTitle("Save participant IDs");
@@ -531,7 +531,7 @@ public class TournamentController {
         var referees = List.copyOf(championship.getReferees());
         String title = tournamentName;
 
-        // Generar en segundo plano para no bloquear JavaFX.
+        // Generate in the background without blocking JavaFX.
         Task<IdentificationPdfService.Result> task = new Task<>() {
 
             @Override
@@ -643,12 +643,12 @@ public class TournamentController {
                 zoneTitleLabel.setVisible(true);
                 zoneTitleLabel.setText(zone.getName());
 
-                // Tabla actual de la zona.
+                // Current group standings.
                 standingsTable.getItems().setAll(
                         championship.getStandings(zone)
                 );
 
-                // Evolución de las tablas partido por partido.
+                // Standings evolution after each match.
                 matchdayResultsArea.setText(
                         groupEvolutionReportService.buildReport(
                                 zone,

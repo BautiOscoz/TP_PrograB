@@ -375,7 +375,7 @@ public class Championship implements Serializable {
             );
         }
 
-        // Evita volver a crear los cruces al cargar el torneo.
+        // Avoid recreating fixtures when loading the tournament.
         boolean alreadyScheduled = matches.stream()
                 .map(Match::asFirstLeg)
                 .anyMatch(Objects::nonNull);
@@ -403,8 +403,8 @@ public class Championship implements Serializable {
             );
         }
 
-        // La tanda constituye el segundo paso de la simulación eliminatoria.
-        // Se procesa antes de buscar otro partido o consultar nuevos estadios.
+        // The shootout is the second step of knockout simulation.
+        // Process it before looking for another match or querying available stadiums.
         if (pendingPenaltyShootout != null) {
             return simulatePendingPenaltyShootout();
         }
@@ -426,7 +426,7 @@ public class Championship implements Serializable {
                         "There are no pending matches in this stage."
                 ));
 
-        // Consulta los disponibles en PostgreSQL antes de cada partido.
+        // Query available stadiums in PostgreSQL before each match.
         reloadVenuesFromDatabase();
 
         List<Stadium> availableStadiums = getUnusedStadiums();
@@ -702,7 +702,7 @@ public class Championship implements Serializable {
             return finalMatch.getAwayTeam();
         }
 
-        // Si empatan, definición por penales
+        // Resolve a draw with a penalty shootout
         finalMatch.setSettledByPenalties(true);
         if (hasRecordedShootout(finalMatch)) {
             return recordedPenaltyWinner(finalMatch);

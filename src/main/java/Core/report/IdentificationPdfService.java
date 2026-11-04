@@ -8,6 +8,8 @@ import java.io.OutputStream;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /** Generates printable participant credentials without depending on JavaFX. */
 public class IdentificationPdfService {
@@ -43,10 +45,13 @@ public class IdentificationPdfService {
         Path output = destination.toAbsolutePath();
         Path temporary = Files.createTempFile(output.getParent(), "credentials-", ".pdf");
         List<String> missing = new ArrayList<>();
+        // Reuse image objects so the PDF embeds each photograph or avatar only once.
+        Map<String, Image> imageCache = new HashMap<>();
         try {
             try (OutputStream stream = Files.newOutputStream(temporary)) {
                 Document document = new Document(PageSize.A4, 36, 36, 36, 36);
                 PdfWriter writer = PdfWriter.getInstance(document, stream);
+                writer.setFullCompression();
                 document.addTitle(title == null ? "Participant credentials" : title);
                 document.open();
                 try {
@@ -63,7 +68,7 @@ public class IdentificationPdfService {
                         heading.setBackgroundColor(new java.awt.Color(225, 235, 245));
                         card.addCell(heading);
                         PdfPCell photoCell = cell("PHOTO\nNOT AVAILABLE", 10, Font.NORMAL);
-                        Image photo = findPhoto(photos, participant.person(), missing);
+                        Image photo = findPhoto(photos, participant.person(), missing, imageCache);
                         if (photo != null) {
                             photo.scaleToFit(90, 105);
                             photoCell = new PdfPCell(photo, false);
@@ -108,12 +113,19 @@ public class IdentificationPdfService {
         return cell;
     }
 
-    private Image findPhoto(Path folder, Person person, List<String> missing) {
+    private Image findPhoto(Path folder, Person person, List<String> missing,
+                            Map<String, Image> imageCache) {
         for (String extension : List.of(".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG")) {
             Path file = folder.resolve(person.getDocumentNumber() + extension);
             if (!Files.isRegularFile(file)) continue;
             try {
-                return Image.getInstance(file.toAbsolutePath().toString());
+                String key = file.toAbsolutePath().toString();
+                Image image = imageCache.get(key);
+                if (image == null) {
+                    image = Image.getInstance(key);
+                    imageCache.put(key, image);
+                }
+                return image;
             } catch (IOException | RuntimeException exception) {
                 // A damaged photo must not prevent exporting the other participants.
             }
@@ -125,7 +137,13 @@ public class IdentificationPdfService {
         var resource = IdentificationPdfService.class.getResource("/images/avatars/avatar-" + avatar + ".png");
         if (resource != null) {
             try {
-                return Image.getInstance(resource);
+                String key = resource.toExternalForm();
+                Image image = imageCache.get(key);
+                if (image == null) {
+                    image = Image.getInstance(resource);
+                    imageCache.put(key, image);
+                }
+                return image;
             } catch (IOException | RuntimeException exception) {
                 // Preserve the text placeholder if the bundled illustration cannot be read.
             }

@@ -1,0 +1,514 @@
+@startuml
+title Simulador de torneos de fútbol - clases y relaciones
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+package "GUI" {
+class AppLauncher {
+  + main(String[] args)
+}
+class View {
+  + start(Stage stage)
+  + main(String[] args)
+}
+}
+package "Controller" {
+class MainMenuController {
+}
+class NewTournamentController {
+}
+class StadiumController {
+}
+class TournamentController {
+}
+class VenuesController {
+}
+}
+package "Core.Run" {
+class Championship {
+  + isRefereeEligible(Referee referee, Team home, Team away)
+  + getCurrentMatchday()
+  + hasPendingGroupMatchdays()
+  + simulateGroupStage()
+  + simulateGroupStage(Consumer<Match> afterEachMatch)
+  + simulateNextMatchday()
+  + simulateNextMatchday(Consumer<Match> afterEachMatch)
+  + getStandings(TournamentZone zone)
+  + loadVenues(List<City> cities, List<Stadium> stadiums)
+  + getRecordedSeriesWinner(FirstLegMatch firstLeg, SecondLegMatch secondLeg)
+  + simulateQuarterFinals(LocalDate startDate)
+  + scheduleQuarterFinals(LocalDate startDate)
+  + simulateNextKnockoutMatch()
+  + hasPendingPenaltyShootout()
+  + isPendingPenaltyShootout(Match match)
+  + getKnockoutDecisionCriterion(Match match)
+  + simulateSemiFinals(List<Team> quarterFinalWinners, LocalDate startDate)
+  + simulateFinal(List<Team> finalists, LocalDate finalDate)
+  + getRecordedFinalWinner(FinalMatch finalMatch)
+}
+}
+package "Core.domain" {
+class City {
+  - id: long
+  - name: String
+  - country: Country
+}
+class Coach {
+  - nationality: Country
+  - titlesWon: int
+}
+class Country {
+  - name: String
+}
+class FinalMatch {
+  - settledByPenalties: boolean
+  + asFinal()
+  + getStageDescription()
+  + isSettledByPenalties()
+}
+class FirstLegMatch {
+  + asFirstLeg()
+  + getStageDescription()
+}
+class GroupMatch {
+  - matchday: int
+  + isGroupStage()
+  + getStageDescription()
+}
+class Lineup {
+  - team: Team
+  - players: List<Player>
+  - formation: FormationType
+  + canUseFormation(Team team,FormationType formation)
+  + getGoalkeeper()
+  + getOutfieldPlayers()
+}
+abstract class Match {
+  - matchDate: LocalDate
+  - homeTeam: Team
+  - awayTeam: Team
+  - referee: Referee
+  - stadium: Stadium
+  - homeGoals: int
+  - awayGoals: int
+  - incidents: List<Incident>
+  - homeLineup: Lineup
+  - awayLineup: Lineup
+  - played: boolean
+  - administrativeReason: String
+  - postponements: int
+  + isForfeit()
+  + awardForfeit(boolean homeUnableToPlay)
+  + awardRandomForfeit(boolean homeWins)
+  + addIncident(Incident incident)
+  + getPlayersOnField(Team team, int minute)
+  + complete(int homeGoals, int awayGoals)
+  + isPlayed()
+  + getStageDescription()
+  + isGroupStage()
+  + asFirstLeg()
+  + asSecondLeg()
+  + asFinal()
+  + isSettledByPenalties()
+}
+class ParticipationTimeline {
+  - entries: Map<Player, Integer>
+  - exits: Map<Player, Integer>
+  + enter(Player player, int minute)
+  + leave(Player player, int minute)
+  + minutesPlayed()
+}
+abstract class Person {
+  - id: int
+  - name: String
+  - lastName: String
+  - documentType: String
+  - documentNumber: int
+  - birthDate: LocalDate
+}
+class Player {
+  - shirtNumber: int
+  - position: Position
+  - isSuspended: boolean
+  - characteristics: Map<String, Integer>
+  - statistics: Map<String, Integer>
+  + isSuspended()
+  + serveSuspensionIfNeeded()
+  + getAverageRating()
+}
+class Referee {
+  - nationality: Country
+  - refereeYears: int
+}
+class SecondLegMatch {
+  - firstLegHomeGoals: int
+  - firstLegAwayGoals: int
+  - settledByPenalties: boolean
+  + asSecondLeg()
+  + getStageDescription()
+  + isSettledByPenalties()
+}
+class Stadium {
+  - id: long
+  - name: String
+  - city: City
+}
+class Team {
+  - id: int
+  - name: String
+  - country: Country
+  - ranking: int
+  - coach: Coach
+  - players: List<Player>
+  + addPlayer(Player player)
+  + getAveragePlayerRating()
+  + getCompetitiveStrength()
+}
+class TeamStanding {
+  - team: Team
+  - points: int
+  - played: int
+  - won: int
+  - drawn: int
+  - lost: int
+  - goalsFor: int
+  - goalsAgainst: int
+  + registerMatch(int scoredGoals, int concededGoals)
+  + getGoalDifference()
+}
+class TournamentZone {
+  - name: String
+  - teams: List<Team>
+  + addTeam(Team team)
+}
+}
+package "Core.incidents" {
+class Goal {
+  - scorer: Player
+  - goalkeeper: Player
+  - isPenalty: boolean
+  - isOwnGoal: boolean
+  + getParticipant()
+  + isPenalty()
+  + isOwnGoal()
+  + getScoringPlayer()
+  + getGoalkeeper()
+  + isMatchGoal()
+  + isPenaltyGoal()
+}
+abstract class Incident {
+  - minute: int
+  + applyToParticipation(ParticipationTimeline timeline)
+  + applyToLineup(Team team, List<Player> playersOnField)
+  + getParticipant()
+  + getScoringPlayer()
+  + getGoalkeeper()
+  + isMatchGoal()
+  + isPenaltyGoal()
+  + getFairPlayPoints()
+  + isYellowCard()
+  + isRedCard()
+  + isShootoutPenalty()
+  + isPenaltyScored()
+}
+class PenaltyShootout {
+  - player: Player
+  - scored: boolean
+  + getParticipant()
+  + isScored()
+  + isShootoutPenalty()
+  + isPenaltyScored()
+}
+class RedCard {
+  - penalizedPlayer: Player
+  + applyToParticipation(ParticipationTimeline timeline)
+  + applyToLineup(Team team, List<Player> playersOnField)
+  + getFairPlayPoints()
+  + isRedCard()
+}
+class Substitution {
+  - playerIn: Player
+  - playerOut: Player
+  + getParticipant()
+  + applyToParticipation(ParticipationTimeline timeline)
+  + applyToLineup(Team team, List<Player> playersOnField)
+}
+class YellowCard {
+  - playerWarned: Player
+  + getFairPlayPoints()
+  + isYellowCard()
+}
+}
+package "Core.enums" {
+enum FormationType {
+  FOUR_THREE_THREE
+  FOUR_FOUR_TWO
+  THREE_FIVE_TWO
+  FOUR_FIVE_ONE
+}
+enum Position {
+  GOALKEEPER
+  DEFENDER
+  MIDFIELDER
+  FORWARD
+}
+enum TournamentStage {
+  GROUP_STAGE
+  QUARTER_FINALS
+  SEMI_FINALS
+  FINAL
+  FINISHED
+}
+}
+package "Core.loader" {
+class TournamentData {
+}
+class TournamentLoader {
+  + load(String filePath)
+}
+class TournamentValidator {
+  + validate(TournamentData data)
+  + requireValid(TournamentData data)
+  + findDuplicateDocuments(TournamentData data)
+}
+interface VenueLoader {
+  + load(countries): Venues
+}
+}
+package "Core.dto" {
+class CoachDto {
+  + person: PersonDto
+  + country: CountryDto
+  + titlesWon: int
+}
+class CountryDto {
+  + name: String
+}
+class PersonDto {
+  + documentType: String
+  + documentNumber: int
+  + fullName: String
+  + birthDate: String
+}
+class PlayerDto {
+  + position: String
+  + person: PersonDto
+  + characteristics: Map<String, Integer>
+  + statistics: Map<String, Integer>
+}
+class PlayersDto {
+  + player: List<PlayerDto>
+}
+class RefereeDto {
+  + person: PersonDto
+  + country: CountryDto
+  + refereeYears: int
+}
+class RefereesDto {
+  + referee: List<RefereeDto>
+}
+class SquadDto {
+  + players: PlayersDto
+  + coach: CoachDto
+}
+class TeamDto {
+  + name: String
+  + country: CountryDto
+  + ranking: int
+  + squad: SquadDto
+}
+class TeamsDto {
+  + team: List<TeamDto>
+}
+class TournamentDto {
+  + teams: TeamsDto
+  + referees: RefereesDto
+}
+class TournamentRootDto {
+  + tournament: TournamentDto
+}
+}
+package "Core.scheduling" {
+class TournamentScheduler {
+  - random: Random
+  - referees: List<Referee>
+  + drawBalancedZones(List<Team> teams)
+  + generateGroupMatches(List<TournamentZone> tournamentZones, LocalDate startDate)
+  + isRefereeEligible(Referee referee, Team home, Team away)
+  + firstLegs(Team[][] pairings, LocalDate date)
+  + quarterFinals(List<List<TeamStanding>> tables, LocalDate date)
+  + secondLegs(List<FirstLegMatch> firstLegs, LocalDate date)
+  + finalMatch(List<Team> finalists, LocalDate date)
+}
+}
+package "Core.simulation" {
+class MatchSimulator {
+  - random: Random
+  + simulate(Match match)
+  + prepareAdministrativeShootout(Match match)
+}
+class PenaltyShootoutSimulator {
+  - random: Random
+  - matchSimulator: MatchSimulator
+  + simulate(Match match)
+}
+}
+package "Core.classification" {
+class KnockoutResolver {
+  + seriesWinnerBeforePenalties(FirstLegMatch first, SecondLegMatch second)
+  + getSeriesPoints(FirstLegMatch firstLeg, SecondLegMatch secondLeg, Team team)
+  + getWeightedGoalDifference(FirstLegMatch firstLeg, SecondLegMatch secondLeg, Team team)
+  + getRecordedSeriesWinner(FirstLegMatch firstLeg, SecondLegMatch secondLeg)
+  + hasRecordedShootout(Match match)
+  + recordedPenaltyWinner(Match match)
+  + getRecordedFinalWinner(FinalMatch finalMatch)
+}
+class StandingsCalculator {
+  + calculate(TournamentZone zone, List<Match> matches)
+}
+}
+package "Core.persistance" {
+class ChampionshipRepository {
+  + save(Championship championship)
+  + load()
+  + exists()
+}
+}
+package "Infrastructure.database" {
+class CityRepository {
+  + findAll(List<Country> countries)
+  + create(String name, Country country)
+  + update(City city)
+  + delete(long cityId)
+}
+class CityRepositoryTest {
+  + main(String[] args)
+}
+class DatabaseConnection {
+  + connect()
+}
+class DatabaseTest {
+  + main(String[] args)
+}
+class DatabaseVenueLoader {
+  + load(List<Country> countries)
+}
+class StadiumRepository {
+  + findAll(List<City> cities)
+  + create(String name, City city)
+  + update(Stadium stadium)
+  + delete(long stadiumId)
+}
+class StadiumRepositoryTest {
+  + main(String[] args)
+}
+}
+package "Core.report" {
+class GroupEvolutionReportService {
+  + buildReport(TournamentZone zone, List<Match> matches)
+}
+class IdentificationPdfService {
+  + generate(List<Team> teams, List<Referee> referees, String title, Path photos, Path destination)
+}
+class IncidentFormatter {
+  + describe(Match match, Incident incident)
+}
+class MatchDetailsFormatter {
+  + title(Match match)
+  + format(Championship championship, Match match)
+}
+class PlayerAttributeFormatter {
+  + format(Map<String, Integer> values)
+}
+class TournamentReportService {
+  + getTopScorers(Championship championship)
+  + getParticipation(Championship championship)
+  + getFairPlay(Championship championship)
+  + getTeamStats(Championship championship)
+  + getPlayerStats(Championship championship)
+  + getPlayerStats(Championship championship, Position position)
+  + getRefereeStats(Championship championship)
+  + getAverageRefereeExperience(Championship championship)
+  + addGoal(boolean penalty)
+}
+}
+package "Utils" {
+class Paths {
+}
+}
+Person <|-- Player
+Person <|-- Coach
+Person <|-- Referee
+Match <|-- GroupMatch
+Match <|-- FirstLegMatch
+Match <|-- SecondLegMatch
+Match <|-- FinalMatch
+Incident <|-- Goal
+Incident <|-- YellowCard
+Incident <|-- RedCard
+Incident <|-- Substitution
+Incident <|-- PenaltyShootout
+VenueLoader <|.. DatabaseVenueLoader
+Championship "1" --> "4" TournamentZone
+TournamentZone "1" --> "4" Team
+Championship --> Match
+Championship --> TournamentScheduler
+Championship --> MatchSimulator
+Championship --> KnockoutResolver
+Championship --> PenaltyShootoutSimulator
+Championship --> VenueLoader
+Team "1" --> "18" Player
+Team --> Coach
+Team --> Country
+Match --> Team : local y visitante
+Match --> Referee
+Match --> Stadium
+Match "1" --> "0..2" Lineup
+Match "1" --> "0..*" Incident
+Lineup --> Team
+Lineup "1" --> "11" Player
+Lineup --> FormationType
+Player --> Position
+City --> Country
+Stadium --> City
+Coach --> Country
+Referee --> Country
+Championship --> TournamentStage
+ChampionshipRepository ..> Championship
+DatabaseVenueLoader ..> CityRepository
+DatabaseVenueLoader ..> StadiumRepository
+CityRepository ..> DatabaseConnection
+StadiumRepository ..> DatabaseConnection
+TournamentController --> Championship
+TournamentController --> TournamentReportService
+TournamentController --> ChampionshipRepository
+TournamentController ..> IdentificationPdfService
+VenuesController ..> CityRepository
+VenuesController ..> StadiumRepository
+NewTournamentController ..> Championship
+NewTournamentController ..> DatabaseVenueLoader
+MainMenuController ..> ChampionshipRepository
+AppLauncher ..> View
+View ..> MainMenuController
+TournamentLoader ..> TournamentRootDto
+TournamentLoader ..> TournamentData
+TournamentLoader ..> TournamentValidator
+TournamentRootDto --> TournamentDto
+TournamentDto --> TeamsDto
+TournamentDto --> RefereesDto
+TeamsDto --> TeamDto
+TeamDto --> SquadDto
+TeamDto --> CountryDto
+SquadDto --> CoachDto
+SquadDto --> PlayersDto
+PlayersDto --> PlayerDto
+PlayerDto --> PersonDto
+CoachDto --> PersonDto
+RefereeDto --> PersonDto
+RefereesDto --> RefereeDto
+TournamentReportService ..> ParticipationTimeline
+Incident ..> ParticipationTimeline
+TeamStanding --> Team
+StandingsCalculator ..> TeamStanding
+MatchDetailsFormatter ..> IncidentFormatter
+@enduml

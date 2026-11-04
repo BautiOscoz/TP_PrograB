@@ -27,7 +27,7 @@ public final class PenaltyShootoutSimulator {
         int awayScore = 0;
 
 
-        // Cinco penales iniciales
+        // First five penalty kicks
         for (int i = 0; i < 5; i++) {
 
             if (simulatePenalty(
@@ -53,7 +53,7 @@ public final class PenaltyShootoutSimulator {
             return awayTeam;
         }
 
-        // Muerte súbita
+        // Sudden death
         int kickerIndex = 5;
 
         while (true) {

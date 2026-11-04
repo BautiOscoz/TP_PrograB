@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="940" viewBox="0 0 1000 940">
+<rect width="100%" height="100%" fill="white"/>
+<rect x="335" y="20" width="330" height="180" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="335" y="20" width="330" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="500.0" y="55" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Championship</text>
+<text x="347" y="109" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- teams: List&lt;Team&gt;</text>
+<text x="347" y="139" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- matches: List&lt;Match&gt;</text>
+<polyline points="335,148 665,148" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="347" y="184" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ simulateNextMatchday()</text>
+<rect x="25" y="280" width="295" height="150" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="25" y="280" width="295" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="172.5" y="315" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">TournamentZone</text>
+<text x="37" y="369" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- teams: List&lt;Team&gt;</text>
+<polyline points="25,378 320,378" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="37" y="414" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ addTeam(team)</text>
+<rect x="675" y="280" width="300" height="180" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="675" y="280" width="300" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="825.0" y="315" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Match</text>
+<text x="687" y="369" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- homeTeam: Team</text>
+<text x="687" y="399" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- awayTeam: Team</text>
+<polyline points="675,408 975,408" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="687" y="444" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ complete(home, away)</text>
+<rect x="25" y="610" width="295" height="150" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="25" y="610" width="295" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="172.5" y="645" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Team</text>
+<text x="37" y="699" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- players: List&lt;Player&gt;</text>
+<polyline points="25,708 320,708" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="37" y="744" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ getCompetitiveStrength()</text>
+<rect x="352" y="610" width="295" height="150" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="352" y="610" width="295" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="499.5" y="645" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Lineup</text>
+<text x="364" y="699" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- formation: FormationType</text>
+<polyline points="352,708 647,708" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="364" y="744" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ canUseFormation(...)</text>
+<rect x="680" y="610" width="295" height="150" fill="#ffffff" stroke="#445461" stroke-width="1.5"/>
+<rect x="680" y="610" width="295" height="55" fill="#e8edf0" stroke="#445461" stroke-width="1.5"/>
+<text x="827.5" y="645" font-family="Arial" font-size="23" font-weight="bold" fill="#1d2e3b" text-anchor="middle">Player</text>
+<text x="692" y="699" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">- position: Position</text>
+<polyline points="680,708 975,708" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="692" y="744" font-family="Arial" font-size="21" font-weight="normal" fill="#1d2e3b" text-anchor="start">+ getAverageRating()</text>
+<polyline points="400,200 400,240 172,240 172,280" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="185" y="268" font-family="Arial" font-size="20" font-weight="normal" fill="#1d2e3b" text-anchor="start">4 zonas</text>
+<polyline points="600,200 600,240 825,240 825,280" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="840" y="268" font-family="Arial" font-size="20" font-weight="normal" fill="#1d2e3b" text-anchor="start">0..* partidos</text>
+<polyline points="172,430 172,610" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="185" y="535" font-family="Arial" font-size="20" font-weight="normal" fill="#1d2e3b" text-anchor="start">4 equipos</text>
+<polyline points="825,460 825,550 500,550 500,610" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="510" y="585" font-family="Arial" font-size="20" font-weight="normal" fill="#1d2e3b" text-anchor="start">0..2 alineaciones</text>
+<polyline points="320,680 352,680" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="325" y="664" font-family="Arial" font-size="19" font-weight="normal" fill="#1d2e3b" text-anchor="start">1</text>
+<polyline points="647,680 680,680" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="646" y="664" font-family="Arial" font-size="19" font-weight="normal" fill="#1d2e3b" text-anchor="start">11</text>
+<polyline points="172,760 172,830 825,830 825,760" fill="none" stroke="#596976" stroke-width="1.5"/>
+<text x="420" y="865" font-family="Arial" font-size="20" font-weight="normal" fill="#1d2e3b" text-anchor="start">Team mantiene 18 jugadores en un torneo válido</text>
+</svg>

@@ -4,7 +4,7 @@ import Core.domain.Match;
 import Core.domain.Player;
 import Core.incidents.Incident;
 
-/** Shared presentation for the interface and console, including the participant's team. */
+/** Formats incidents for display, including the participant's team. */
 public final class IncidentFormatter {
     private IncidentFormatter() {}
 

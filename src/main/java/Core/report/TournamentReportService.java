@@ -169,7 +169,7 @@ public class TournamentReportService {
         return getPlayerStats(championship, null);
     }
 
-    // position == null significa "Todos".
+    // position == null means "All".
     public List<PlayerStatsRow> getPlayerStats(
             Championship championship,
             Position position

@@ -28,7 +28,7 @@ public class StadiumRepositoryTest {
 
             championship.loadVenues(cities, stadiums);
 
-            // 5. Mostrar los resultados
+            // 5. Display the results
             System.out.println(
                     "Cities loaded: "
                             + championship.getCities().size()

@@ -31,7 +31,7 @@ public class StandingsCalculator {
             TournamentZone zone,
             List<Match> matches
     ) {
-        // Solo cuentan los partidos de grupos jugados en esta zona.
+        // Only played group-stage matches in this group count.
         List<Match> playedMatches = matches.stream()
                 .filter(Match::isGroupStage)
                 .filter(Match::isPlayed)
@@ -49,10 +49,10 @@ public class StandingsCalculator {
         List<TeamStanding> table =
                 new ArrayList<>(standings.values());
 
-        // Primero: puntos, diferencia de gol y goles a favor.
+        // First: points, goal difference and goals scored.
         table.sort(SPORTING_ORDER);
 
-        // Buscamos bloques de equipos igualados en esos tres criterios.
+        // Find groups of teams tied on all three criteria.
         int start = 0;
 
         while (start < table.size()) {
@@ -99,7 +99,7 @@ public class StandingsCalculator {
             TeamStanding awayStanding =
                     standings.get(match.getAwayTeam());
 
-            // Ambos equipos deben pertenecer a la tabla que calculamos.
+            // Both teams must belong to the standings being calculated.
             if (homeStanding != null && awayStanding != null) {
                 homeStanding.registerMatch(
                         match.getHomeGoals(),
@@ -124,7 +124,7 @@ public class StandingsCalculator {
                 .map(TeamStanding::getTeam)
                 .toList();
 
-        // Tabla que cuenta únicamente los partidos entre los empatados.
+        // Standings based only on matches between the tied teams.
         Map<Team, TeamStanding> headToHead =
                 buildTable(teams, playedMatches);
 

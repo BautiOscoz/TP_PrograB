@@ -1,0 +1,835 @@
+[
+  {
+    "name": "MainMenuController",
+    "path": "src/main/java/Controller/MainMenuController.java",
+    "package": "Controller",
+    "methods": []
+  },
+  {
+    "name": "NewTournamentController",
+    "path": "src/main/java/Controller/NewTournamentController.java",
+    "package": "Controller",
+    "methods": []
+  },
+  {
+    "name": "StadiumController",
+    "path": "src/main/java/Controller/StadiumController.java",
+    "package": "Controller",
+    "methods": []
+  },
+  {
+    "name": "TournamentController",
+    "path": "src/main/java/Controller/TournamentController.java",
+    "package": "Controller",
+    "methods": [
+      "toString()",
+      "setTournament(Championship championship, String tournamentName)",
+      "call()",
+      "toString(Match match)",
+      "fromString(String value)"
+    ]
+  },
+  {
+    "name": "VenuesController",
+    "path": "src/main/java/Controller/VenuesController.java",
+    "package": "Controller",
+    "methods": [
+      "setTournament(Championship championship, String tournamentName)"
+    ]
+  },
+  {
+    "name": "KnockoutResolver",
+    "path": "src/main/java/Core/classification/KnockoutResolver.java",
+    "package": "Core.classification",
+    "methods": [
+      "seriesWinnerBeforePenalties(FirstLegMatch first, SecondLegMatch second)",
+      "getMatchPoints(int goalsFor, int goalsAgainst)",
+      "getSeriesPoints(FirstLegMatch firstLeg, SecondLegMatch secondLeg, Team team)",
+      "getWeightedGoalDifference(FirstLegMatch firstLeg, SecondLegMatch secondLeg, Team team)",
+      "getRecordedSeriesWinner(FirstLegMatch firstLeg, SecondLegMatch secondLeg)",
+      "hasRecordedShootout(Match match)",
+      "recordedPenaltyWinner(Match match)",
+      "getRecordedFinalWinner(FinalMatch finalMatch)"
+    ]
+  },
+  {
+    "name": "StandingsCalculator",
+    "path": "src/main/java/Core/classification/StandingsCalculator.java",
+    "package": "Core.classification",
+    "methods": [
+      "calculate(TournamentZone zone, List<Match> matches)"
+    ]
+  },
+  {
+    "name": "City",
+    "path": "src/main/java/Core/domain/City.java",
+    "package": "Core.domain",
+    "methods": [
+      "City(long id, String name, Country country)",
+      "getId()",
+      "setId(long id)",
+      "getName()",
+      "setName(String name)",
+      "getCountry()",
+      "setCountry(Country country)",
+      "toString()"
+    ]
+  },
+  {
+    "name": "Coach",
+    "path": "src/main/java/Core/domain/Coach.java",
+    "package": "Core.domain",
+    "methods": [
+      "Coach(int id, String name, String lastName, String documentType, int documentNumber, LocalDate birthDate, Country nationality, int titlesWon)",
+      "getNationality()",
+      "setNationality(Country nationality)",
+      "getTitlesWon()",
+      "setTitlesWon(int titlesWon)"
+    ]
+  },
+  {
+    "name": "Country",
+    "path": "src/main/java/Core/domain/Country.java",
+    "package": "Core.domain",
+    "methods": [
+      "Country(String name)",
+      "getName()",
+      "setName(String name)",
+      "equals(Object object)",
+      "hashCode()",
+      "toString()"
+    ]
+  },
+  {
+    "name": "FinalMatch",
+    "path": "src/main/java/Core/domain/FinalMatch.java",
+    "package": "Core.domain",
+    "methods": [
+      "FinalMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee)",
+      "asFinal()",
+      "getStageDescription()",
+      "isSettledByPenalties()",
+      "setSettledByPenalties(boolean settledByPenalties)"
+    ]
+  },
+  {
+    "name": "FirstLegMatch",
+    "path": "src/main/java/Core/domain/FirstLegMatch.java",
+    "package": "Core.domain",
+    "methods": [
+      "FirstLegMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee)",
+      "asFirstLeg()",
+      "getStageDescription()"
+    ]
+  },
+  {
+    "name": "GroupMatch",
+    "path": "src/main/java/Core/domain/GroupMatch.java",
+    "package": "Core.domain",
+    "methods": [
+      "GroupMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee, int matchday)",
+      "isGroupStage()",
+      "getStageDescription()",
+      "getMatchday()",
+      "setMatchday(int matchday)"
+    ]
+  },
+  {
+    "name": "Lineup",
+    "path": "src/main/java/Core/domain/Lineup.java",
+    "package": "Core.domain",
+    "methods": [
+      "Lineup(Team team,FormationType formation)",
+      "canUseFormation(Team team,FormationType formation)",
+      "getPlayers()",
+      "getTeam()",
+      "getFormation()",
+      "getRandomPlayer(Random random)",
+      "getGoalkeeper()",
+      "getOutfieldPlayers()"
+    ]
+  },
+  {
+    "name": "Match",
+    "path": "src/main/java/Core/domain/Match.java",
+    "package": "Core.domain",
+    "methods": [
+      "isForfeit()",
+      "getAdministrativeReason()",
+      "getPostponements()",
+      "awardForfeit(boolean homeUnableToPlay)",
+      "awardRandomForfeit(boolean homeWins)",
+      "Match(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee)",
+      "addIncident(Incident incident)",
+      "getPlayersOnField(Team team, int minute)",
+      "getMatchDate()",
+      "setMatchDate(LocalDate matchDate)",
+      "getHomeTeam()",
+      "getAwayTeam()",
+      "getReferee()",
+      "setReferee(Referee referee)",
+      "getHomeGoals()",
+      "setHomeGoals(int homeGoals)",
+      "getAwayGoals()",
+      "setAwayGoals(int awayGoals)",
+      "complete(int homeGoals, int awayGoals)",
+      "getIncidents()",
+      "getHomeLineup()",
+      "getAwayLineup()",
+      "setInitialLineups(Lineup homeLineup, Lineup awayLineup)",
+      "isPlayed()",
+      "setPlayed(boolean played)",
+      "getStageDescription()",
+      "isGroupStage()",
+      "asFirstLeg()",
+      "asSecondLeg()",
+      "asFinal()",
+      "isSettledByPenalties()",
+      "getMatchday()",
+      "setMatchday(int matchday)",
+      "getStadium()",
+      "setStadium(Stadium stadium)"
+    ]
+  },
+  {
+    "name": "ParticipationTimeline",
+    "path": "src/main/java/Core/domain/ParticipationTimeline.java",
+    "package": "Core.domain",
+    "methods": [
+      "ParticipationTimeline(List<Player> home, List<Player> away)",
+      "enter(Player player, int minute)",
+      "leave(Player player, int minute)",
+      "minutesPlayed()"
+    ]
+  },
+  {
+    "name": "Person",
+    "path": "src/main/java/Core/domain/Person.java",
+    "package": "Core.domain",
+    "methods": [
+      "Person(int id, String name, String lastName, String documentType, int documentNumber, LocalDate birthDate)",
+      "getId()",
+      "setId(int id)",
+      "getName()",
+      "setName(String name)",
+      "getLastName()",
+      "setLastName(String lastName)",
+      "getDocumentType()",
+      "setDocumentType(String documentType)",
+      "getDocumentNumber()",
+      "setDocumentNumber(int documentNumber)",
+      "getBirthDate()",
+      "setBirthDate(LocalDate birthDate)"
+    ]
+  },
+  {
+    "name": "Player",
+    "path": "src/main/java/Core/domain/Player.java",
+    "package": "Core.domain",
+    "methods": [
+      "Player(int id, String name, String lastName, String documentType, int documentNumber, LocalDate birthDate, int shirtNumber, Position position)",
+      "getShirtNumber()",
+      "setShirtNumber(int shirtNumber)",
+      "getPosition()",
+      "setPosition(Position position)",
+      "isSuspended()",
+      "setSuspended(boolean suspended)",
+      "serveSuspensionIfNeeded()",
+      "getCharacteristics()",
+      "setCharacteristics(Map<String, Integer> characteristics)",
+      "getStatistics()",
+      "setStatistics(Map<String, Integer> statistics)",
+      "getAverageRating()"
+    ]
+  },
+  {
+    "name": "Referee",
+    "path": "src/main/java/Core/domain/Referee.java",
+    "package": "Core.domain",
+    "methods": [
+      "Referee(int id, String name, String lastName, String documentType, int documentNumber, LocalDate birthDate, Country nationality, int refereeYears)",
+      "getNationality()",
+      "setNationality(Country nationality)",
+      "getRefereeYears()",
+      "setRefereeYears(int refereeYears)"
+    ]
+  },
+  {
+    "name": "SecondLegMatch",
+    "path": "src/main/java/Core/domain/SecondLegMatch.java",
+    "package": "Core.domain",
+    "methods": [
+      "SecondLegMatch(LocalDate matchDate, Team homeTeam, Team awayTeam, Referee referee, int firstLegHomeGoals, int firstLegAwayGoals)",
+      "getFirstLegHomeGoals()",
+      "getFirstLegAwayGoals()",
+      "asSecondLeg()",
+      "getStageDescription()",
+      "isSettledByPenalties()",
+      "setSettledByPenalties(boolean settledByPenalties)"
+    ]
+  },
+  {
+    "name": "Stadium",
+    "path": "src/main/java/Core/domain/Stadium.java",
+    "package": "Core.domain",
+    "methods": [
+      "Stadium(long id, String name, City city)",
+      "getId()",
+      "setId(long id)",
+      "getName()",
+      "setName(String name)",
+      "getCity()",
+      "setCity(City city)",
+      "toString()"
+    ]
+  },
+  {
+    "name": "Team",
+    "path": "src/main/java/Core/domain/Team.java",
+    "package": "Core.domain",
+    "methods": [
+      "Team(int id, String name, Country country, int ranking, Coach coach)",
+      "addPlayer(Player player)",
+      "getAveragePlayerRating()",
+      "getCompetitiveStrength()",
+      "getId()",
+      "setId(int id)",
+      "getName()",
+      "setName(String name)",
+      "getCountry()",
+      "setCountry(Country country)",
+      "getRanking()",
+      "setRanking(int ranking)",
+      "getCoach()",
+      "setCoach(Coach coach)",
+      "getPlayers()"
+    ]
+  },
+  {
+    "name": "TeamStanding",
+    "path": "src/main/java/Core/domain/TeamStanding.java",
+    "package": "Core.domain",
+    "methods": [
+      "TeamStanding(Team team)",
+      "registerMatch(int scoredGoals, int concededGoals)",
+      "getGoalDifference()",
+      "getTeam()",
+      "getPoints()",
+      "getPlayed()",
+      "getWon()",
+      "getDrawn()",
+      "getLost()",
+      "getGoalsFor()",
+      "getGoalsAgainst()"
+    ]
+  },
+  {
+    "name": "TournamentZone",
+    "path": "src/main/java/Core/domain/TournamentZone.java",
+    "package": "Core.domain",
+    "methods": [
+      "TournamentZone(String name)",
+      "addTeam(Team team)",
+      "getName()",
+      "setName(String name)",
+      "getTeams()"
+    ]
+  },
+  {
+    "name": "CoachDto",
+    "path": "src/main/java/Core/dto/CoachDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "CountryDto",
+    "path": "src/main/java/Core/dto/CountryDto.java",
+    "package": "Core.dto",
+    "methods": [
+      "CountryDto(String name)"
+    ]
+  },
+  {
+    "name": "PersonDto",
+    "path": "src/main/java/Core/dto/PersonDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "PlayerDto",
+    "path": "src/main/java/Core/dto/PlayerDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "PlayersDto",
+    "path": "src/main/java/Core/dto/PlayersDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "RefereeDto",
+    "path": "src/main/java/Core/dto/RefereeDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "RefereesDto",
+    "path": "src/main/java/Core/dto/RefereesDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "SquadDto",
+    "path": "src/main/java/Core/dto/SquadDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "TeamDto",
+    "path": "src/main/java/Core/dto/TeamDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "TeamsDto",
+    "path": "src/main/java/Core/dto/TeamsDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "TournamentDto",
+    "path": "src/main/java/Core/dto/TournamentDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "TournamentRootDto",
+    "path": "src/main/java/Core/dto/TournamentRootDto.java",
+    "package": "Core.dto",
+    "methods": []
+  },
+  {
+    "name": "FormationType",
+    "path": "src/main/java/Core/enums/FormationType.java",
+    "package": "Core.enums",
+    "methods": [
+      "getDefenders()",
+      "getMidfielders()",
+      "getForwards()"
+    ]
+  },
+  {
+    "name": "Position",
+    "path": "src/main/java/Core/enums/Position.java",
+    "package": "Core.enums",
+    "methods": []
+  },
+  {
+    "name": "TournamentStage",
+    "path": "src/main/java/Core/enums/TournamentStage.java",
+    "package": "Core.enums",
+    "methods": []
+  },
+  {
+    "name": "Goal",
+    "path": "src/main/java/Core/incidents/Goal.java",
+    "package": "Core.incidents",
+    "methods": [
+      "Goal(int minute, Player scorer, Player goalkeeper, boolean isPenalty, boolean isOwnGoal)",
+      "getScorer()",
+      "getParticipant()",
+      "isPenalty()",
+      "isOwnGoal()",
+      "getDescription()",
+      "getScoringPlayer()",
+      "getGoalkeeper()",
+      "isMatchGoal()",
+      "isPenaltyGoal()"
+    ]
+  },
+  {
+    "name": "Incident",
+    "path": "src/main/java/Core/incidents/Incident.java",
+    "package": "Core.incidents",
+    "methods": [
+      "Incident(int minute)",
+      "getMinute()",
+      "getDescription()",
+      "applyToParticipation(ParticipationTimeline timeline)",
+      "applyToLineup(Team team, List<Player> playersOnField)",
+      "getParticipant()",
+      "getScoringPlayer()",
+      "getGoalkeeper()",
+      "isMatchGoal()",
+      "isPenaltyGoal()",
+      "getAffectedPlayer()",
+      "getFairPlayPoints()",
+      "isYellowCard()",
+      "isRedCard()",
+      "getPlayerIn()",
+      "getPlayerOut()",
+      "isShootoutPenalty()",
+      "getPenaltyTaker()",
+      "isPenaltyScored()"
+    ]
+  },
+  {
+    "name": "PenaltyShootout",
+    "path": "src/main/java/Core/incidents/PenaltyShootout.java",
+    "package": "Core.incidents",
+    "methods": [
+      "PenaltyShootout(int minute, Player player, boolean scored)",
+      "getPlayer()",
+      "getParticipant()",
+      "isScored()",
+      "isShootoutPenalty()",
+      "getPenaltyTaker()",
+      "isPenaltyScored()",
+      "getDescription()"
+    ]
+  },
+  {
+    "name": "RedCard",
+    "path": "src/main/java/Core/incidents/RedCard.java",
+    "package": "Core.incidents",
+    "methods": [
+      "RedCard(int minute, Player penalizedPlayer)",
+      "getPenalizedPlayer()",
+      "applyToParticipation(ParticipationTimeline timeline)",
+      "applyToLineup(Team team, List<Player> playersOnField)",
+      "getDescription()",
+      "getAffectedPlayer()",
+      "getFairPlayPoints()",
+      "isRedCard()"
+    ]
+  },
+  {
+    "name": "Substitution",
+    "path": "src/main/java/Core/incidents/Substitution.java",
+    "package": "Core.incidents",
+    "methods": [
+      "Substitution(int minute, Player playerIn, Player playerOut)",
+      "getPlayerIn()",
+      "getParticipant()",
+      "getPlayerOut()",
+      "applyToParticipation(ParticipationTimeline timeline)",
+      "applyToLineup(Team team, List<Player> playersOnField)",
+      "getDescription()"
+    ]
+  },
+  {
+    "name": "YellowCard",
+    "path": "src/main/java/Core/incidents/YellowCard.java",
+    "package": "Core.incidents",
+    "methods": [
+      "YellowCard(int minute, Player playerWarned)",
+      "getPlayerWarned()",
+      "getDescription()",
+      "getAffectedPlayer()",
+      "getFairPlayPoints()",
+      "isYellowCard()"
+    ]
+  },
+  {
+    "name": "TournamentData",
+    "path": "src/main/java/Core/loader/TournamentData.java",
+    "package": "Core.loader",
+    "methods": [
+      "TournamentData(List<Team> teams, List<Referee> referees, List<Country> countries)",
+      "getTeams()",
+      "getReferees()",
+      "getCountries()"
+    ]
+  },
+  {
+    "name": "TournamentLoader",
+    "path": "src/main/java/Core/loader/TournamentLoader.java",
+    "package": "Core.loader",
+    "methods": [
+      "load(String filePath)"
+    ]
+  },
+  {
+    "name": "TournamentValidator",
+    "path": "src/main/java/Core/loader/TournamentValidator.java",
+    "package": "Core.loader",
+    "methods": [
+      "validate(TournamentData data)",
+      "requireValid(TournamentData data)",
+      "findDuplicateDocuments(TournamentData data)"
+    ]
+  },
+  {
+    "name": "VenueLoader",
+    "path": "src/main/java/Core/loader/VenueLoader.java",
+    "package": "Core.loader",
+    "methods": []
+  },
+  {
+    "name": "ChampionshipRepository",
+    "path": "src/main/java/Core/persistance/ChampionshipRepository.java",
+    "package": "Core.persistance",
+    "methods": [
+      "ChampionshipRepository()",
+      "ChampionshipRepository(Path filePath)",
+      "save(Championship championship)",
+      "load()",
+      "exists()"
+    ]
+  },
+  {
+    "name": "GroupEvolutionReportService",
+    "path": "src/main/java/Core/report/GroupEvolutionReportService.java",
+    "package": "Core.report",
+    "methods": [
+      "buildReport(TournamentZone zone, List<Match> matches)"
+    ]
+  },
+  {
+    "name": "IdentificationPdfService",
+    "path": "src/main/java/Core/report/IdentificationPdfService.java",
+    "package": "Core.report",
+    "methods": [
+      "Result(int total, List<String> missingPhotos)",
+      "generate(List<Team> teams, List<Referee> referees, String title, Path photos, Path destination)"
+    ]
+  },
+  {
+    "name": "IncidentFormatter",
+    "path": "src/main/java/Core/report/IncidentFormatter.java",
+    "package": "Core.report",
+    "methods": [
+      "describe(Match match, Incident incident)"
+    ]
+  },
+  {
+    "name": "MatchDetailsFormatter",
+    "path": "src/main/java/Core/report/MatchDetailsFormatter.java",
+    "package": "Core.report",
+    "methods": [
+      "title(Match match)",
+      "format(Championship championship, Match match)"
+    ]
+  },
+  {
+    "name": "PlayerAttributeFormatter",
+    "path": "src/main/java/Core/report/PlayerAttributeFormatter.java",
+    "package": "Core.report",
+    "methods": [
+      "format(Map<String, Integer> values)"
+    ]
+  },
+  {
+    "name": "TournamentReportService",
+    "path": "src/main/java/Core/report/TournamentReportService.java",
+    "package": "Core.report",
+    "methods": [
+      "getTopScorers(Championship championship)",
+      "getParticipation(Championship championship)",
+      "getFairPlay(Championship championship)",
+      "getTeamStats(Championship championship)",
+      "getPlayerStats(Championship championship)",
+      "getPlayerStats(Championship championship, Position position)",
+      "getRefereeStats(Championship championship)",
+      "getAverageRefereeExperience(Championship championship)",
+      "TopScorerRow(Player player, Team team, int goals, int penaltyGoals)",
+      "addGoal(boolean penalty)",
+      "getPlayer()",
+      "getTeam()",
+      "getGoals()",
+      "getPenaltyGoals()",
+      "ParticipationRow(Player player, Team team, int matches, int minutes)",
+      "getPlayer()",
+      "getTeam()",
+      "getMatches()",
+      "getMinutes()",
+      "FairPlayRow(Team team, int yellow, int red, int points)",
+      "getTeam()",
+      "getYellow()",
+      "getRed()",
+      "getPoints()",
+      "TeamStatsRow(Team team, double averageAge, String coach, int coachAge, String coachNationality, int goalsFor, int goalsAgainst, double effectiveness)",
+      "getTeam()",
+      "getAverageAge()",
+      "getCoach()",
+      "getCoachAge()",
+      "getCoachNationality()",
+      "getGoalsFor()",
+      "getGoalsAgainst()",
+      "getEffectiveness()",
+      "PlayerStatsRow(Player player, Team team, String position, int matches, int minutes, int goals, int goalsAgainst)",
+      "getPlayer()",
+      "getTeam()",
+      "getPosition()",
+      "getMatches()",
+      "getMinutes()",
+      "getGoals()",
+      "getGoalsAgainst()",
+      "getAverageGoalsAgainst()",
+      "RefereeStatsRow(Referee referee, int matches, int years)",
+      "getReferee()",
+      "getMatches()",
+      "getYears()"
+    ]
+  },
+  {
+    "name": "Championship",
+    "path": "src/main/java/Core/Run/Championship.java",
+    "package": "Core.Run",
+    "methods": [
+      "setVenueLoader(Core.loader.VenueLoader venueLoader)",
+      "Championship(String jsonPath)",
+      "Championship(String jsonPath, long seed)",
+      "isRefereeEligible(Referee referee, Team home, Team away)",
+      "getCurrentMatchday()",
+      "hasPendingGroupMatchdays()",
+      "simulateGroupStage()",
+      "simulateGroupStage(Consumer<Match> afterEachMatch)",
+      "simulateNextMatchday()",
+      "simulateNextMatchday(Consumer<Match> afterEachMatch)",
+      "getStandings(TournamentZone zone)",
+      "loadVenues(List<City> cities, List<Stadium> stadiums)",
+      "getTournamentZones()",
+      "getMatches()",
+      "getPlayedMatches()",
+      "getTeams()",
+      "getReferees()",
+      "getCountries()",
+      "getCities()",
+      "getStadiums()",
+      "getStage()",
+      "getChampion()",
+      "getRecordedSeriesWinner(FirstLegMatch firstLeg, SecondLegMatch secondLeg)",
+      "simulateQuarterFinals(LocalDate startDate)",
+      "scheduleQuarterFinals(LocalDate startDate)",
+      "simulateNextKnockoutMatch()",
+      "hasPendingPenaltyShootout()",
+      "isPendingPenaltyShootout(Match match)",
+      "getPendingPenaltyShootout()",
+      "getKnockoutDecisionCriterion(Match match)",
+      "simulateSemiFinals(List<Team> quarterFinalWinners, LocalDate startDate)",
+      "simulateFinal(List<Team> finalists, LocalDate finalDate)",
+      "getRecordedFinalWinner(FinalMatch finalMatch)"
+    ]
+  },
+  {
+    "name": "TournamentScheduler",
+    "path": "src/main/java/Core/scheduling/TournamentScheduler.java",
+    "package": "Core.scheduling",
+    "methods": [
+      "TournamentScheduler(Random random, List<Referee> referees)",
+      "drawBalancedZones(List<Team> teams)",
+      "generateGroupMatches(List<TournamentZone> tournamentZones, LocalDate startDate)",
+      "isRefereeEligible(Referee referee, Team home, Team away)",
+      "firstLegs(Team[][] pairings, LocalDate date)",
+      "quarterFinals(List<List<TeamStanding>> tables, LocalDate date)",
+      "secondLegs(List<FirstLegMatch> firstLegs, LocalDate date)",
+      "finalMatch(List<Team> finalists, LocalDate date)"
+    ]
+  },
+  {
+    "name": "MatchSimulator",
+    "path": "src/main/java/Core/simulation/MatchSimulator.java",
+    "package": "Core.simulation",
+    "methods": [
+      "MatchSimulator(Random random)",
+      "simulate(Match match)",
+      "prepareAdministrativeShootout(Match match)"
+    ]
+  },
+  {
+    "name": "PenaltyShootoutSimulator",
+    "path": "src/main/java/Core/simulation/PenaltyShootoutSimulator.java",
+    "package": "Core.simulation",
+    "methods": [
+      "PenaltyShootoutSimulator(Random random, MatchSimulator matchSimulator)",
+      "simulate(Match match)"
+    ]
+  },
+  {
+    "name": "AppLauncher",
+    "path": "src/main/java/GUI/AppLauncher.java",
+    "package": "GUI",
+    "methods": [
+      "main(String[] args)"
+    ]
+  },
+  {
+    "name": "View",
+    "path": "src/main/java/GUI/View.java",
+    "package": "GUI",
+    "methods": [
+      "start(Stage stage)",
+      "main(String[] args)"
+    ]
+  },
+  {
+    "name": "CityRepository",
+    "path": "src/main/java/Infrastructure/database/CityRepository.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "findAll(List<Country> countries)",
+      "create(String name, Country country)",
+      "update(City city)",
+      "delete(long cityId)"
+    ]
+  },
+  {
+    "name": "CityRepositoryTest",
+    "path": "src/main/java/Infrastructure/database/CityRepositoryTest.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "main(String[] args)"
+    ]
+  },
+  {
+    "name": "DatabaseConnection",
+    "path": "src/main/java/Infrastructure/database/DatabaseConnection.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "connect()"
+    ]
+  },
+  {
+    "name": "DatabaseTest",
+    "path": "src/main/java/Infrastructure/database/DatabaseTest.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "main(String[] args)"
+    ]
+  },
+  {
+    "name": "DatabaseVenueLoader",
+    "path": "src/main/java/Infrastructure/database/DatabaseVenueLoader.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "load(List<Country> countries)"
+    ]
+  },
+  {
+    "name": "StadiumRepository",
+    "path": "src/main/java/Infrastructure/database/StadiumRepository.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "findAll(List<City> cities)",
+      "create(String name, City city)",
+      "update(Stadium stadium)",
+      "delete(long stadiumId)"
+    ]
+  },
+  {
+    "name": "StadiumRepositoryTest",
+    "path": "src/main/java/Infrastructure/database/StadiumRepositoryTest.java",
+    "package": "Infrastructure.database",
+    "methods": [
+      "main(String[] args)"
+    ]
+  },
+  {
+    "name": "Paths",
+    "path": "src/main/java/Utils/Paths.java",
+    "package": "Utils",
+    "methods": []
+  }
+]

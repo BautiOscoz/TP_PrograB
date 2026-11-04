@@ -32,8 +32,8 @@ public class GroupEvolutionReportService {
             }
         }
 
-        // Ordena por fecha del torneo y conserva el orden
-        // original de los partidos de una misma fecha.
+        // Sort by tournament matchday and preserve the
+        // original order of matches on the same matchday.
         zoneMatches.sort(
                 Comparator.comparingInt(Match::getMatchday)
         );
@@ -72,7 +72,7 @@ public class GroupEvolutionReportService {
                         .append(match.getAwayTeam().getName())
                         .append("\n\n");
 
-                // Todavía no incorporamos el partido actual.
+                // The current match has not been included yet.
                 text.append("BEFORE THE MATCH\n");
 
                 appendTable(
@@ -91,7 +91,7 @@ public class GroupEvolutionReportService {
                         .append(match.getAwayTeam().getName())
                         .append("\n\n");
 
-                // Ahora incorporamos su resultado.
+                // Now include its result.
                 if (match.isForfeit()) text.append("NOT DISPUTED: ")
                         .append(match.getAdministrativeReason()).append("\n\n");
                 previousMatches.add(match);

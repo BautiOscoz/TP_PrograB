@@ -12,12 +12,12 @@
         <maven.compiler.source>24</maven.compiler.source>
         <maven.compiler.target>24</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Version de JavaFX compatible con JDKs recientes -->
+        <!-- JavaFX version compatible with recent JDKs -->
         <javafx.version>21.0.2</javafx.version>
     </properties>
 
     <dependencies>
-        <!-- Gson: Para la lectura del archivo JSON -->
+        <!-- Gson: reads JSON files -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -30,14 +30,14 @@
             <version>42.7.8</version>
         </dependency>
 
-        <!-- JavaFX Controls: Botones, tablas, layouts para la GUI -->
+        <!-- JavaFX Controls: buttons, tables and GUI layouts -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
         </dependency>
 
-        <!-- JavaFX FXML: Permite disenar la interfaz con Scene Builder / FXML -->
+        <!-- JavaFX FXML: interface layouts created with Scene Builder / FXML -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
@@ -53,7 +53,7 @@
 
     <build>
         <plugins>
-            <!-- Plugin para compilar Java 24 -->
+            <!-- Plugin for compiling Java 24 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -64,7 +64,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Plugin para ejecutar facilmente la App de JavaFX -->
+            <!-- Plugin for running the JavaFX application -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>

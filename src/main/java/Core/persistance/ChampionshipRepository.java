@@ -43,7 +43,7 @@ public class ChampionshipRepository {
     public Championship load() {
         File file = filePath.toFile();
         if (!file.exists()) {
-            return null; // No hay una partida previa guardada
+            return null; // No previous saved tournament exists
         }
 
         try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(filePath))) {
