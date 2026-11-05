@@ -711,3 +711,25 @@
     -fx-background-color: #36577a;
     -fx-text-fill: #f0d681;
 }
+
+.content-area .ranking-table .table-cell,
+.content-area .standings-table .table-cell,
+.content-area .standings-table .table-cell.team-column {
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+    -fx-padding: 5px 9px;
+}
+
+.content-area .ranking-table .column-header .label,
+.content-area .standings-table .column-header .label {
+    -fx-alignment: CENTER;
+    -fx-text-alignment: CENTER;
+}
+/* Mantener el color original al pasar el cursor */
+.content-area .attributes-table .table-row-cell:filled:hover {
+    -fx-background-color: #1b2c40;
+}
+
+.content-area .attributes-table .table-row-cell:filled:odd:hover {
+    -fx-background-color: #203248;
+}

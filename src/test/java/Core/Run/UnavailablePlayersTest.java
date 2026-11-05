@@ -111,9 +111,13 @@ public class UnavailablePlayersTest {
         SecondLegMatch second = new SecondLegMatch(source.getMatchDate().plusDays(7), source.getHomeTeam(), source.getAwayTeam(), source.getReferee(), 0, 3);
         suspendKeepers(second.getHomeTeam());
         new MatchSimulator(new Random(5)).simulate(second);
-        var decide = Championship.class.getDeclaredMethod("determineSeriesWinner", FirstLegMatch.class, SecondLegMatch.class);
-        decide.setAccessible(true);
-        Team winner = (Team) decide.invoke(c, first, second);
+        Random random = new Random(2026);
+        MatchSimulator simulator = new MatchSimulator(random);
+        var knockout = new Core.simulation.KnockoutStageService(new java.util.ArrayList<>(),
+                new Core.scheduling.TournamentScheduler(random, c.getReferees()),
+                new Core.classification.KnockoutResolver(),
+                new Core.simulation.PenaltyShootoutSimulator(random, simulator), simulator, random);
+        Team winner = knockout.determineSeriesWinner(first, second);
         check(second.isForfeit() && second.isSettledByPenalties(), "Tied series gets separate shootout");
         check(second.getIncidents().stream().allMatch(i -> i.isShootoutPenalty()), "Only shootout incidents");
         check(c.getRecordedSeriesWinner(first, second) == winner, "Winner can be read without resimulation");

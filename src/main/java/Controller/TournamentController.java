@@ -1,27 +1,16 @@
 package Controller;
 
 import Core.Run.Championship;
-import Core.domain.FinalMatch;
-import Core.domain.FirstLegMatch;
+import GUI.*;
+import static Core.report.MatchScoreSummary.getPenaltyScore;
 import Core.domain.Match;
-import Core.domain.Player;
-import Core.domain.SecondLegMatch;
-import Core.domain.Team;
-import Core.incidents.Incident;
 import Core.domain.TeamStanding;
-import Core.domain.TournamentZone;
 import Core.persistance.ChampionshipRepository;
 import Core.report.TournamentReportService;
-import Core.report.MatchDetailsFormatter;
-import Core.enums.Position;
 import javafx.scene.control.ComboBox;
-import javafx.util.StringConverter;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
@@ -32,31 +21,16 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.WindowEvent;
 
-import Core.report.IdentificationPdfService;
-import javafx.concurrent.Task;
-import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
-import java.io.File;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+import javafx.concurrent.Task;
 
 import Core.enums.TournamentStage;
-import java.time.LocalDate;
 import java.util.Comparator;
-import Core.report.GroupEvolutionReportService;
-import Core.report.TournamentReportService.TeamStatsRow;
-import javafx.scene.control.TableCell;
-import Core.report.TournamentReportService.PlayerStatsRow;
-import Core.report.TournamentReportService.RefereeStatsRow;
-import Core.report.PlayerAttributeFormatter;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TableRow;
-import javafx.scene.input.MouseButton;
-import java.util.Map;
-import javafx.scene.control.SplitPane;
 
 public class TournamentController {
 
@@ -77,83 +51,79 @@ public class TournamentController {
     @FXML private TableColumn<TeamStanding, Number> differenceColumn;
     @FXML private TextArea reportArea;
     @FXML private VBox rankingPanel;
-    @FXML private VBox knockoutBracket;
     @FXML private javafx.scene.control.ScrollPane knockoutScroll;
-    @FXML private HBox bracketContent;
     @FXML private VBox quarterColumn;
     @FXML private VBox quarterConnectorColumn;
     @FXML private VBox semiColumn;
     @FXML private VBox semiConnectorColumn;
     @FXML private VBox finalColumn;
     @FXML private Label winnerBanner;
-    @FXML private Button groupBtn;
-    @FXML private Button knockoutBtn;
-    @FXML private Button scorersBtn;
-    @FXML private Button participationBtn;
-    @FXML private Button fairplayBtn;
-    @FXML private Button teamStBtn;
-    @FXML private Button playerStBtn;
-    @FXML private Button refereesStBtn;
-    @FXML private Button getIDBtn;
-    @FXML private Button venuesBtn;
-    @FXML private Button backBtn;
     @FXML private Button simulateMatchdayBtn;
     @FXML private Button simulateKnockoutBtn;
     @FXML private TextArea matchdayResultsArea;
     @FXML private HBox playerFilterBar;
     @FXML private ComboBox<String> playerPositionFilter;
-    @FXML private ComboBox<PlayerChoice> individualPlayerFilter;
-    private boolean updatingPlayerChoices;
-    private record PlayerChoice(Player player, String label) {
-        @Override public String toString() { return label; }
-    }
+    @FXML private ComboBox<PlayerStatsView.PlayerChoice> individualPlayerFilter;
     private final TournamentReportService reportService = new TournamentReportService();
-    private final ChampionshipRepository repository = new ChampionshipRepository();
-    private final GroupEvolutionReportService groupEvolutionReportService =
-            new GroupEvolutionReportService();
+    private final ChampionshipRepository repository;
+    private final DialogService dialogs = new DialogService();
+    private GroupStageView groupStageView;
+    private RankingsView rankingsView;
+    private PlayerStatsView playerStatsView;
+    private KnockoutBracketView knockoutBracketView;
+    private MatchDetailsView matchDetailsView;
+    private IdentificationExportController identificationExportController;
     private Championship championship;
     private String tournamentName;
+    private boolean operationInProgress;
+
+    public TournamentController() { this(new ChampionshipRepository()); }
+
+    TournamentController(ChampionshipRepository repository) {
+        this.repository = Objects.requireNonNull(repository);
+    }
 
     @FXML
     private void initialize() {
-        configureColumns();
+        RankingPanelView rankingView = new RankingPanelView(
+                rankingPanel, phaseLabel, zoneTitleLabel,
+                () -> showPanels(false, false, false));
+        rankingsView = new RankingsView(rankingPanel, rankingView, reportService);
+        playerStatsView = new PlayerStatsView(rankingPanel, playerFilterBar,
+                playerPositionFilter, individualPlayerFilter, rankingView, reportService);
+        groupStageView = new GroupStageView(zoneTitleLabel,
+                phaseLabel,
+                standingsTable,
+                positionColumn,
+                teamColumn,
+                pointsColumn,
+                playedColumn,
+                wonColumn,
+                drawnColumn,
+                lostColumn,
+                goalsForColumn,
+                goalsAgainstColumn,
+                differenceColumn,
+                matchdayResultsArea);
+        matchDetailsView = new MatchDetailsView(tournamentPane, dialogs);
+        knockoutBracketView = new KnockoutBracketView(quarterColumn,
+                quarterConnectorColumn,
+                semiColumn,
+                semiConnectorColumn,
+                finalColumn,
+                winnerBanner,
+                matchDetailsView);
+        identificationExportController = new IdentificationExportController(
+                tournamentPane, reportArea, this::showReport, dialogs, this::setOperationInProgress);
         zoneTitleLabel.managedProperty().bind(zoneTitleLabel.visibleProperty());
-
-        playerPositionFilter.getItems().setAll(
-                "All",
-                "Goalkeepers",
-                "Defenders",
-                "Midfielders",
-                "Forwards"
-        );
-
-        playerPositionFilter.setValue("All");
-
-        individualPlayerFilter.setOnAction(event -> {
-            if (!updatingPlayerChoices && championship != null && playerFilterBar.isVisible()) {
-                handlePlayersStats();
-            }
-        });
-
-        playerPositionFilter.setOnAction(event -> {
-            if (championship != null && playerFilterBar.isVisible()) {
-                handlePlayersStats();
-            }
-        });
-
         reportArea.setEditable(false);
         reportArea.setWrapText(true);
-
         showGroupTable();
-        showKnockoutBracket(false);
-
-        playerPositionFilter.getStyleClass().add("player-filter");
-        individualPlayerFilter.getStyleClass().add("player-filter");
     }
 
     public void setTournament(Championship championship, String tournamentName) {
         this.championship = championship;
-        scheduleQuarterFinalsIfNeeded();
+        championship.scheduleQuarterFinalsIfNeeded();
         this.tournamentName = tournamentName;
         tournamentNameLabel.setText(tournamentName);
         configureCloseSave();
@@ -163,27 +133,59 @@ public class TournamentController {
 
     @FXML
     private void handleSimulateMatchday() {
-        if (championship == null || !championship.hasPendingGroupMatchdays()) {
+        if (operationInProgress || championship == null || !championship.hasPendingGroupMatchdays()) {
             return;
         }
-
         int playedMatchday = championship.getCurrentMatchday();
-        try {
+        runSimulation("Simulating matchday " + playedMatchday + "...", () -> {
             championship.simulateNextMatchday();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            saveTournament();
+            championship.scheduleQuarterFinalsIfNeeded();
+            return playedMatchday;
+        }, matchday -> {
             showGroupStage();
-            updateSimulationButtons();
-            showError(e.getMessage());
-            return;
-        }
-        scheduleQuarterFinalsIfNeeded();
-        saveTournament();
+            phaseLabel.setText("Group Stage - Matchday " + matchday
+                    + (championship.getCurrentMatchday() == matchday ? " has postponed matches" : " completed"));
+        }, this::showGroupStage);
+    }
 
-        showGroupStage();
-        phaseLabel.setText("Group Stage - Matchday " + playedMatchday
-                + (championship.getCurrentMatchday() == playedMatchday ? " has postponed matches" : " completed"));
-        updateSimulationButtons();
+    private <T> void runSimulation(String message, Callable<T> simulation,
+                                   Consumer<T> onSuccess, Runnable onFailure) {
+        if (operationInProgress) return;
+        setOperationInProgress(true);
+        phaseLabel.setText(message);
+        Task<T> task = new Task<>() {
+            @Override
+            protected T call() throws Exception {
+                return simulation.call();
+            }
+        };
+        // Task completion handlers run on the JavaFX application thread.
+        task.setOnSucceeded(event -> finishSimulation(() -> onSuccess.accept(task.getValue())));
+        task.setOnFailed(event -> finishSimulation(() -> {
+            onFailure.run();
+            Throwable failure = task.getException();
+            showError(failure.getMessage() == null ? failure.toString() : failure.getMessage());
+        }));
+        Thread worker = new Thread(task, "tournament-simulation");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    private void finishSimulation(Runnable refresh) {
+        try {
+            // The worker has finished; saving cannot observe a partially changing tournament.
+            saveTournament();
+            refresh.run();
+        } finally {
+            setOperationInProgress(false);
+        }
+    }
+
+    private void setOperationInProgress(boolean running) {
+        operationInProgress = running;
+        // Block navigation, reports and editing while the worker owns the tournament.
+        tournamentPane.setDisable(running);
+        if (!running && championship != null) updateSimulationButtons();
     }
 
     private void updateSimulationButtons() {
@@ -237,13 +239,14 @@ public class TournamentController {
 
     @FXML
     private void handleSimulateKnockoutMatch() {
-        if (championship == null) {
+        if (operationInProgress || championship == null
+                || championship.getStage() == TournamentStage.GROUP_STAGE
+                || championship.getStage() == TournamentStage.FINISHED) {
             return;
         }
-        try {
-            boolean wasPenaltyShootoutPending = championship.hasPendingPenaltyShootout();
-            Match played = championship.simulateNextKnockoutMatch();
-            saveTournament();
+        boolean wasPenaltyShootoutPending = championship.hasPendingPenaltyShootout();
+        runSimulation(wasPenaltyShootoutPending ? "Simulating penalties..." : "Simulating match...",
+                championship::simulateNextKnockoutMatch, played -> {
             if (!played.isPlayed()) {
                 phaseLabel.setText(championship.getKnockoutDecisionCriterion(played));
             } else if (played.isForfeit() && !wasPenaltyShootoutPending) {
@@ -271,480 +274,37 @@ public class TournamentController {
             zoneTitleLabel.setVisible(false);
             showKnockoutBracket(true);
             buildKnockoutBracket();
-            updateSimulationButtons();
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            saveTournament();
-            showError(e.getMessage());
-        }
+        }, this::handleKnockoutStage);
     }
 
     @FXML
     private void handleTopScorers() {
-        showRanking("Top Scorers", reportService.getTopScorers(championship),
-                rankingColumn("Player", row -> row.getPlayer().getName() + " " + row.getPlayer().getLastName()),
-                rankingColumn("Team", row -> row.getTeam().getName()),
-                rankingColumn("Goals", TournamentReportService.TopScorerRow::getGoals),
-                rankingColumn("Penalty goals", TournamentReportService.TopScorerRow::getPenaltyGoals));
+        rankingsView.showTopScorers(championship);
     }
 
     @FXML
     private void handleParticipation() {
-        showRanking("Participation Ranking", reportService.getParticipation(championship),
-                rankingColumn("Player", row -> row.getPlayer().getName() + " " + row.getPlayer().getLastName()),
-                rankingColumn("Team", row -> row.getTeam().getName()),
-                rankingColumn("Matches", TournamentReportService.ParticipationRow::getMatches),
-                rankingColumn("Minutes", TournamentReportService.ParticipationRow::getMinutes));
+        rankingsView.showParticipation(championship);
     }
 
     @FXML
     private void handleFairPlay() {
-        showRanking("Fair Play", reportService.getFairPlay(championship),
-                rankingColumn("Team", row -> row.getTeam().getName()),
-                rankingColumn("Yellow cards", TournamentReportService.FairPlayRow::getYellow),
-                rankingColumn("Red cards", TournamentReportService.FairPlayRow::getRed),
-                rankingColumn("Points", TournamentReportService.FairPlayRow::getPoints));
-    }
-
-    private <T, V> TableColumn<T, V> rankingColumn(String title,
-            java.util.function.Function<T, V> value) {
-        TableColumn<T, V> column = new TableColumn<>(title);
-        column.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(value.apply(cell.getValue())));
-        column.setMinWidth(100);
-        column.setPrefWidth(180);
-        return column;
-    }
-
-    @SafeVarargs
-    private final <T> TableView<T> showRanking(
-            String title, List<T> rows, TableColumn<T, ?>... columns) {
-        showPanels(false, false, false);
-        phaseLabel.setText(title);
-        zoneTitleLabel.setVisible(false);
-        TableView<T> table = new TableView<>();
-        table.getItems().setAll(rows);
-        for (TableColumn<T, ?> column : columns) table.getColumns().add(column);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        table.getStyleClass().add("ranking-table");
-        table.setPlaceholder(new Label("No results yet. Simulate matches to see the ranking."));
-        Label summary = new Label(rows.size() + " entries  |  Click a column heading to sort");
-        summary.getStyleClass().add("ranking-summary");
-        VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
-        rankingPanel.getChildren().setAll(summary, table);
-        setPanelVisible(rankingPanel, true);
-        return table;
+        rankingsView.showFairPlay(championship);
     }
 
     @FXML
     private void handleTeamsStats() {
-        TableColumn<TeamStatsRow, Integer> goalsFor =
-                rankingColumn("GF", TeamStatsRow::getGoalsFor);
-
-        TableColumn<TeamStatsRow, Integer> goalsAgainst =
-                rankingColumn("GA", TeamStatsRow::getGoalsAgainst);
-
-        // Las columnas de goles necesitan menos espacio.
-        goalsFor.setMinWidth(45);
-        goalsFor.setPrefWidth(60);
-
-        goalsAgainst.setMinWidth(45);
-        goalsAgainst.setPrefWidth(60);
-
-        showRanking(
-                "Teams Stats",
-                reportService.getTeamStats(championship),
-
-                rankingColumn("Team",
-                        row -> row.getTeam().getName()),
-
-                decimalRankingColumn("Avg age",
-                        TeamStatsRow::getAverageAge, "%.1f"),
-
-                rankingColumn("Coach",
-                        TeamStatsRow::getCoach),
-
-                rankingColumn("Coach age",
-                        TeamStatsRow::getCoachAge),
-
-                rankingColumn("Coach nationality",
-                        TeamStatsRow::getCoachNationality),
-
-                goalsFor,
-                goalsAgainst,
-
-                decimalRankingColumn("Effectiveness",
-                        TeamStatsRow::getEffectiveness, "%.1f%%")
-        );
-    }
-
-    private <T> TableColumn<T, Double> decimalRankingColumn(
-            String title,
-            java.util.function.Function<T, Double> value,
-            String format) {
-
-        TableColumn<T, Double> column = rankingColumn(title, value);
-
-        column.setCellFactory(col -> new TableCell<T, Double>() {
-            @Override
-            protected void updateItem(Double item, boolean empty) {
-                super.updateItem(item, empty);
-
-                setText(empty || item == null
-                        ? null
-                        : String.format(format, item));
-            }
-        });
-
-        return column;
+        rankingsView.showTeamsStats(championship);
     }
 
     @FXML
     private void handlePlayersStats() {
-        Position position = switch (playerPositionFilter.getValue()) {
-            case "Goalkeepers" -> Position.GOALKEEPER;
-            case "Defenders" -> Position.DEFENDER;
-            case "Midfielders" -> Position.MIDFIELDER;
-            case "Forwards" -> Position.FORWARD;
-            default -> null;
-        };
-
-        List<PlayerStatsRow> rows =
-                reportService.getPlayerStats(championship, position);
-
-        // Actualizar las opciones conservando el jugador seleccionado.
-        PlayerChoice previous = individualPlayerFilter.getValue();
-
-        List<PlayerChoice> choices = new java.util.ArrayList<>();
-        choices.add(new PlayerChoice(null, "All players"));
-
-        for (PlayerStatsRow row : rows) {
-            Player player = row.getPlayer();
-
-            choices.add(new PlayerChoice(
-                    player,
-                    player.getLastName() + ", " + player.getName()
-                            + " - " + row.getTeam().getName()
-                            + " (#" + player.getShirtNumber() + ")"
-            ));
-        }
-
-        updatingPlayerChoices = true;
-
-        try {
-            individualPlayerFilter.getItems().setAll(choices);
-
-            individualPlayerFilter.setValue(
-                    choices.stream()
-                            .filter(choice -> previous != null
-                                    && choice.player() == previous.player())
-                            .findFirst()
-                            .orElse(choices.get(0))
-            );
-        } finally {
-            updatingPlayerChoices = false;
-        }
-
-        Player selectedPlayer = individualPlayerFilter.getValue().player();
-
-        List<PlayerStatsRow> filteredRows = rows.stream()
-                .filter(row -> selectedPlayer == null
-                        || row.getPlayer() == selectedPlayer)
-                .toList();
-
-        TableView<PlayerStatsRow> table = showRanking(
-                "Players Stats",
-                filteredRows,
-
-                rankingColumn("Player",
-                        row -> row.getPlayer().getName()
-                                + " " + row.getPlayer().getLastName()),
-
-                rankingColumn("Team",
-                        row -> row.getTeam().getName()),
-
-                rankingColumn("Position",
-                        PlayerStatsRow::getPosition),
-
-                rankingColumn("Shirt number",
-                        row -> row.getPlayer().getShirtNumber()),
-
-                rankingColumn("Matches",
-                        PlayerStatsRow::getMatches),
-
-                rankingColumn("Minutes",
-                        PlayerStatsRow::getMinutes),
-
-                rankingColumn("Goals",
-                        PlayerStatsRow::getGoals),
-
-                rankingColumn("Goals conceded",
-                        row -> row.getPlayer().getPosition() == Position.GOALKEEPER
-                                ? row.getGoalsAgainst()
-                                : null),
-
-                decimalRankingColumn("Avg conceded / match",
-                        row -> row.getPlayer().getPosition() == Position.GOALKEEPER
-                                && row.getMatches() > 0
-                                ? row.getAverageGoalsAgainst()
-                                : null,
-                        "%.2f"),
-
-                decimalRankingColumn("Average rating",
-                        row -> row.getPlayer().getAverageRating(),
-                        "%.2f"),
-
-                rankingColumn("Suspended",
-                        row -> row.getPlayer().isSuspended() ? "Yes" : "No")
-        );
-
-        // Permitir desplazamiento horizontal por la cantidad de columnas.
-        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-        table.setPlaceholder(new Label(
-                "No players found for the selected filters."
-        ));
-
-        // showRanking oculta los filtros: volver a mostrarlos.
-        setPlayerFilterVisible(true);
-
-        // Quitar la tabla del panel para colocarla dentro de una pestaña.
-        rankingPanel.getChildren().remove(table);
-
-        TabPane tabs = new TabPane();
-        tabs.getStyleClass().add("players-tabs");
-
-        Tab statsTab = new Tab("Players Stats", table);
-        statsTab.setClosable(false);
-
-        tabs.getTabs().add(statsTab);
-
-        VBox.setVgrow(tabs, javafx.scene.layout.Priority.ALWAYS);
-        rankingPanel.getChildren().add(tabs);
-
-        // Abrir la ficha al hacer clic sobre una fila con un jugador.
-        table.setRowFactory(tv -> {
-            TableRow<PlayerStatsRow> tableRow = new TableRow<>();
-
-            tableRow.setOnMouseClicked(event -> {
-                if (!tableRow.isEmpty()
-                        && event.getButton() == MouseButton.PRIMARY
-                        && event.getClickCount() == 1) {
-
-                    openPlayerTab(tabs, tableRow.getItem());
-                }
-            });
-
-            return tableRow;
-        });
-    }
-
-    private void openPlayerTab(TabPane tabs, PlayerStatsRow row) {
-        Player player = row.getPlayer();
-
-        Tab existingTab = tabs.getTabs().stream()
-                .filter(tab -> tab.getUserData() == player)
-                .findFirst()
-                .orElse(null);
-
-        if (existingTab != null) {
-            tabs.getSelectionModel().select(existingTab);
-        } else {
-            Label title = new Label(
-                    player.getName() + " " + player.getLastName()
-                            + " - " + row.getTeam().getName()
-            );
-            title.getStyleClass().add("section-title");
-            title.setWrapText(true);
-
-            Label playerId = new Label(
-                    String.format("PLAYER ID  •  #%04d", player.getId())
-            );
-            playerId.getStyleClass().add("player-id-badge");
-
-            Label document = new Label(
-                    "Document: " + player.getDocumentType()
-                            + " " + player.getDocumentNumber()
-            );
-            document.getStyleClass().add("player-info-text");
-            document.setWrapText(true);
-
-            Label birthDate = new Label(
-                    "Birth date: " + player.getBirthDate()
-                            + "  |  Age: "
-                            + java.time.Period.between(
-                            player.getBirthDate(),
-                            LocalDate.now()
-                    ).getYears()
-            );
-            birthDate.getStyleClass().add("player-info-text");
-            birthDate.setWrapText(true);
-
-            VBox personalData = new VBox(8, playerId, document, birthDate);
-            personalData.getStyleClass().add("player-info-card");
-
-            VBox characteristics = createAttributesTable(
-                    "Characteristics",
-                    player.getCharacteristics()
-            );
-
-            VBox statistics = createAttributesTable(
-                    "Statistics",
-                    player.getStatistics()
-            );
-
-
-            HBox tables = new HBox(14, characteristics, statistics);
-
-            characteristics.setMinWidth(0);
-            statistics.setMinWidth(0);
-
-            characteristics.setPrefWidth(0);
-            statistics.setPrefWidth(0);
-
-            characteristics.setMaxWidth(Double.MAX_VALUE);
-            statistics.setMaxWidth(Double.MAX_VALUE);
-
-            HBox.setHgrow(characteristics, javafx.scene.layout.Priority.ALWAYS);
-            HBox.setHgrow(statistics, javafx.scene.layout.Priority.ALWAYS);
-
-            VBox content = new VBox(12, title, personalData, tables);
-            content.setStyle("-fx-padding: 12;");
-            VBox.setVgrow(tables, javafx.scene.layout.Priority.ALWAYS);
-
-            Tab playerTab = new Tab(
-                    player.getName() + " " + player.getLastName(),
-                    content
-            );
-
-            playerTab.setClosable(true);
-            playerTab.setUserData(player);
-
-            tabs.getTabs().add(playerTab);
-            tabs.getSelectionModel().select(playerTab);
-        }
-    }
-
-    private VBox createAttributesTable(
-            String title,
-            Map<String, Integer> attributes) {
-
-        Label heading = new Label(title);
-        heading.getStyleClass().add("ranking-summary");
-        heading.setWrapText(true);
-
-        TableView<Map.Entry<String, Integer>> table = new TableView<>();
-
-        TableColumn<Map.Entry<String, Integer>, String> attributeColumn =
-                rankingColumn(
-                        "Attribute",
-                        entry -> PlayerAttributeFormatter.label(entry.getKey())
-                );
-
-        TableColumn<Map.Entry<String, Integer>, Integer> valueColumn =
-                rankingColumn("Value", entry -> entry.getValue());
-
-        attributeColumn.setMinWidth(150);
-        attributeColumn.setPrefWidth(240);
-
-        valueColumn.setMinWidth(65);
-        valueColumn.setPrefWidth(90);
-
-        table.getColumns().add(attributeColumn);
-        table.getColumns().add(valueColumn);
-
-        if (attributes != null) {
-            table.getItems().setAll(attributes.entrySet());
-        }
-
-        attributeColumn.setSortType(TableColumn.SortType.ASCENDING);
-        table.getSortOrder().add(attributeColumn);
-        table.sort();
-
-        attributeColumn.setSortable(false);
-        valueColumn.setSortable(false);
-
-        attributeColumn.setReorderable(false);
-        valueColumn.setReorderable(false);
-
-        attributeColumn.setResizable(false);
-        valueColumn.setResizable(false);
-
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        table.getStyleClass().add("ranking-table");
-        table.setPlaceholder(new Label("No data available."));
-
-        VBox container = new VBox(8, heading, table);
-        container.setMinWidth(0);
-        container.setMinHeight(0);
-
-        VBox.setVgrow(table, javafx.scene.layout.Priority.ALWAYS);
-
-        return container;
-    }
-
-    private String buildPlayerDetails(PlayerStatsRow row) {
-        Player player = row.getPlayer();
-
-        StringBuilder text = new StringBuilder();
-
-        text.append(player.getName())
-                .append(" ")
-                .append(player.getLastName())
-                .append(" - ")
-                .append(row.getTeam().getName())
-
-                .append("\nID: ")
-                .append(player.getId())
-
-                .append(" | Document: ")
-                .append(player.getDocumentType())
-                .append(" ")
-                .append(player.getDocumentNumber())
-
-                .append("\nBirth date: ")
-                .append(player.getBirthDate())
-
-                .append(" | Age: ")
-                .append(java.time.Period.between(
-                        player.getBirthDate(),
-                        LocalDate.now()
-                ).getYears())
-
-                .append("\n\nCHARACTERISTICS\n")
-                .append(PlayerAttributeFormatter.format(
-                        player.getCharacteristics()
-                ))
-
-                .append("\n\nIMPORTED STATISTICS (SOURCE DATA)\n")
-                .append(PlayerAttributeFormatter.format(
-                        player.getStatistics()
-                ));
-
-        return text.toString();
+        playerStatsView.show(championship);
     }
 
     @FXML
     private void handleRefereesStats() {
-        showRanking(
-                "Referees Stats",
-                reportService.getRefereeStats(championship),
-
-                rankingColumn("Referee",
-                        row -> row.getReferee().getName()
-                                + " " + row.getReferee().getLastName()),
-
-                rankingColumn("Matches",
-                        RefereeStatsRow::getMatches),
-
-                rankingColumn("Years of experience",
-                        RefereeStatsRow::getYears)
-        );
-
-        Label average = new Label(String.format(
-                "Average years of experience: %.2f years",
-                reportService.getAverageRefereeExperience(championship)
-        ));
-
-        average.getStyleClass().add("ranking-summary");
-        rankingPanel.getChildren().add(average);
+        rankingsView.showRefereesStats(championship);
     }
 
     private void setPlayerFilterVisible(boolean visible) {
@@ -754,117 +314,13 @@ public class TournamentController {
 
     @FXML
     private void handleGetIdentifications() {
-
-        if (championship == null) {
-            showError("Load a tournament first.");
-            return;
-        }
-
-        // Select the photographs folder.
-        showInformation("Participant photographs",
-                "Name each photograph with the person's document number, for example 12345678.jpg. "
-                        + "JPG, JPEG and PNG are supported. Missing photos use a sample illustration and are reported in the result.");
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-
-        directoryChooser.setTitle(
-                "Choose the photographs folder"
-        );
-
-        File photos = directoryChooser.showDialog(
-                tournamentPane.getScene().getWindow()
-        );
-
-        if (photos == null) {
-            return;
-        }
-
-        // Select where to save the PDF.
-        FileChooser chooser = new FileChooser();
-
-        chooser.setTitle("Save participant IDs");
-        chooser.setInitialFileName("participant-ids.pdf");
-
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("PDF", "*.pdf")
-        );
-
-        File selected = chooser.showSaveDialog(
-                tournamentPane.getScene().getWindow()
-        );
-
-        if (selected == null) {
-            return;
-        }
-
-        if (!selected.getName()
-                .toLowerCase(java.util.Locale.ROOT)
-                .endsWith(".pdf")) {
-
-            showError("The filename must end in .pdf.");
-            return;
-        }
-
-        var teams = List.copyOf(championship.getTeams());
-        var referees = List.copyOf(championship.getReferees());
-        String title = tournamentName;
-
-        // Generate in the background without blocking JavaFX.
-        Task<IdentificationPdfService.Result> task = new Task<>() {
-
-            @Override
-            protected IdentificationPdfService.Result call()
-                    throws Exception {
-
-                return new IdentificationPdfService().generate(
-                        teams,
-                        referees,
-                        title,
-                        photos.toPath(),
-                        selected.toPath()
-                );
-            }
-        };
-
-        getIDBtn.setDisable(true);
-
-        task.setOnSucceeded(event -> {
-
-            getIDBtn.setDisable(false);
-
-            var result = task.getValue();
-
-            showReport();
-
-            String message =
-                    "PDF generated: " + selected.getAbsolutePath()
-                            + "\nParticipant IDs: " + result.total()
-                            + "\nMissing photographs: "
-                            + result.missingPhotos().size();
-
-            reportArea.setText(
-                    message + "\n\n"
-                            + String.join("\n", result.missingPhotos())
-            );
-
-            showInformation("Participant IDs", message);
-        });
-
-        task.setOnFailed(event -> {
-
-            getIDBtn.setDisable(false);
-
-            showError(
-                    "Could not generate the PDF: "
-                            + task.getException().getMessage()
-            );
-        });
-
-        new Thread(task, "identificaciones-pdf").start();
+        if (operationInProgress) return;
+        identificationExportController.export(championship, tournamentName);
     }
 
     @FXML
     private void handleBack() {
-        if (!saveTournament()) return;
+        if (operationInProgress || !saveTournament()) return;
 
         try {
             Parent view = FXMLLoader.load(
@@ -907,145 +363,12 @@ public class TournamentController {
     }
 
     private void showZone(int zoneIndex) {
-        if (championship != null) {
-            List<TournamentZone> zones =
-                    championship.getTournamentZones();
-
-            if (zoneIndex >= 0 && zoneIndex < zones.size()) {
-                TournamentZone zone = zones.get(zoneIndex);
-
-                showGroupTable();
-
-                phaseLabel.setText("Group Stage");
-                zoneTitleLabel.setVisible(true);
-                zoneTitleLabel.setText(zone.getName());
-
-                // Current group standings.
-                standingsTable.getItems().setAll(
-                        championship.getStandings(zone)
-                );
-
-                // Standings evolution after each match.
-                matchdayResultsArea.setText(
-                        groupEvolutionReportService.buildReport(
-                                zone,
-                                championship.getMatches()
-                        )
-                );
-
-                matchdayResultsArea.positionCaret(0);
-            }
-        }
-    }
-
-
-
-    private void configureColumns() {
-        standingsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        standingsTable.getColumns().forEach(column -> {
-            column.setSortable(false);
-            column.setMinWidth(column == teamColumn ? 150 : 42);
-        });
-        teamColumn.getStyleClass().add("team-column");
-        positionColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(
-                        standingsTable.getItems().indexOf(cell.getValue()) + 1
-                )
-        );
-        teamColumn.setCellValueFactory(cell ->
-                new ReadOnlyStringWrapper(
-                        cell.getValue().getTeam().getName()
-                )
-        );
-        pointsColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getPoints())
-        );
-        playedColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getPlayed())
-        );
-        wonColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getWon())
-        );
-        drawnColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getDrawn())
-        );
-        lostColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getLost())
-        );
-        goalsForColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getGoalsFor())
-        );
-        goalsAgainstColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getGoalsAgainst())
-        );
-        differenceColumn.setCellValueFactory(cell ->
-                new ReadOnlyObjectWrapper<>(cell.getValue().getGoalDifference())
-        );
+        showGroupTable();
+        groupStageView.showZone(championship, zoneIndex);
     }
 
     private void buildKnockoutBracket() {
-        quarterColumn.getChildren().clear();
-        quarterConnectorColumn.getChildren().clear();
-        semiColumn.getChildren().clear();
-        semiConnectorColumn.getChildren().clear();
-        finalColumn.getChildren().clear();
-        winnerBanner.setText("WINNER: -");
-
-        List<FirstLegMatch> firstLegs = championship.getMatches().stream()
-                .map(Match::asFirstLeg)
-                .filter(Objects::nonNull)
-                .toList();
-        List<SecondLegMatch> secondLegs = championship.getMatches().stream()
-                .map(Match::asSecondLeg)
-                .filter(Objects::nonNull)
-                .toList();
-
-        addSeriesCards(quarterColumn, firstLegs, secondLegs, 0, 4);
-        addSeriesCards(semiColumn, firstLegs, secondLegs, 4, 2);
-        addConnectors(quarterConnectorColumn, 2);
-        addConnectors(semiConnectorColumn, 1);
-
-        championship.getMatches().stream()
-                .map(Match::asFinal)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .ifPresent(finalMatch -> {
-                    if (finalMatch.isPlayed()
-                            && !championship.isPendingPenaltyShootout(finalMatch)) {
-                        Team winner = championship.getRecordedFinalWinner(finalMatch);
-                        finalColumn.getChildren().add(createMatchCard(List.of(finalMatch), winner));
-                        winnerBanner.setText("WINNER: " + winner.getName());
-                    } else if (championship.isPendingPenaltyShootout(finalMatch)) {
-                        finalColumn.getChildren().add(createPendingPenaltyCard(finalMatch));
-                    } else {
-                        finalColumn.getChildren().add(createPendingMatchCard(finalMatch));
-                    }
-                });
-    }
-
-    private void addConnectors(VBox column, int count) {
-        for (int i = 0; i < count; i++) {
-            Label arrow = new Label("›");
-            arrow.getStyleClass().add("bracket-arrow");
-            arrow.setMaxHeight(Double.MAX_VALUE);
-            VBox.setVgrow(arrow, javafx.scene.layout.Priority.ALWAYS);
-            column.getChildren().add(arrow);
-        }
-    }
-
-    private void addSeriesCards(VBox column, List<FirstLegMatch> firstLegs,
-                                List<SecondLegMatch> secondLegs, int startIndex, int count) {
-        for (int index = startIndex; index < startIndex + count && index < firstLegs.size(); index++) {
-            FirstLegMatch first = firstLegs.get(index);
-            SecondLegMatch second = index < secondLegs.size() ? secondLegs.get(index) : null;
-            if (second != null && first.isPlayed() && second.isPlayed()
-                    && !championship.isPendingPenaltyShootout(second)) {
-                Team winner = championship.getRecordedSeriesWinner(first, second);
-                column.getChildren().add(createMatchCard(List.of(first, second), winner));
-            } else {
-                column.getChildren().add(createPendingSeriesCard(first, second));
-            }
-        }
+        knockoutBracketView.show(championship);
     }
 
     @FXML
@@ -1062,137 +385,8 @@ public class TournamentController {
         }
     }
 
-    private VBox createPendingSeriesCard(FirstLegMatch first, SecondLegMatch second) {
-        VBox card = new VBox(3);
-        card.getStyleClass().add("match-card");
-        Label teams = new Label(first.getHomeTeam().getName()
-                + " vs " + first.getAwayTeam().getName());
-        teams.setWrapText(true);
-        card.getChildren().add(teams);
-        if (first.isPlayed()) {
-            card.getChildren().add(new Label("First leg: " + first.getHomeGoals()
-                    + " - " + first.getAwayGoals() + (first.isForfeit() ? " (administrative)" : "")));
-        } else {
-            card.getChildren().add(new Label("First leg pending"));
-        }
-        if (second == null || !second.isPlayed()) {
-            card.getChildren().add(new Label("Second leg pending"));
-        } else if (championship.isPendingPenaltyShootout(second)) {
-            card.getChildren().add(new Label("Penalty shootout pending"));
-        }
-        if (first.isPlayed()) {
-            card.getChildren().add(new Label("Click to view incidents"));
-            card.setOnMouseClicked(event -> showMatchDetails(
-                    second != null && second.isPlayed()
-                            ? List.of(first, second)
-                            : List.of(first)
-            ));
-        }
-        return card;
-    }
-
-    private VBox createPendingPenaltyCard(Match match) {
-        VBox card = new VBox(3);
-        card.getStyleClass().add("match-card");
-        card.getChildren().add(new Label(match.getHomeTeam().getName()
-                + " " + match.getHomeGoals() + " - " + match.getAwayGoals()
-                + " " + match.getAwayTeam().getName()));
-        card.getChildren().add(new Label("Penalty shootout pending"));
-        card.getChildren().add(new Label("Click to view incidents"));
-        card.setOnMouseClicked(event -> showMatchDetails(List.of(match)));
-        return card;
-    }
-
-    private VBox createPendingMatchCard(FinalMatch match) {
-        VBox card = new VBox(3);
-        card.getStyleClass().add("match-card");
-        card.getChildren().add(new Label(match.getHomeTeam().getName()
-                + " vs " + match.getAwayTeam().getName()));
-        card.getChildren().add(new Label("Final pending"));
-        return card;
-    }
-
-    private VBox createMatchCard(List<Match> matches, Team winner) {
-        Match displayMatch = matches.size() == 1 ? matches.get(0) : matches.get(matches.size() - 1);
-
-        VBox card = new VBox(3);
-        card.getStyleClass().add("match-card");
-        card.setFillWidth(true);
-
-        addTeamScoreRow(card, displayMatch.getHomeTeam(), displayMatch.getHomeGoals(), winner);
-        addTeamScoreRow(card, displayMatch.getAwayTeam(), displayMatch.getAwayGoals(), winner);
-
-        if (isSettledByPenalties(displayMatch)) {
-            int[] penalties = getPenaltyScore(displayMatch);
-            Label penaltyLabel = new Label("Penalties " + penalties[0] + " - " + penalties[1]);
-            penaltyLabel.getStyleClass().add("penalty-score");
-            penaltyLabel.setMaxWidth(Double.MAX_VALUE);
-            penaltyLabel.setAlignment(javafx.geometry.Pos.CENTER);
-            card.getChildren().add(penaltyLabel);
-        }
-
-        if (matches.size() == 2) {
-            int[] aggregate = getAggregateScore(matches.get(0), matches.get(1));
-            Label aggregateLabel = new Label("Aggregate " + aggregate[0] + " - " + aggregate[1]);
-            aggregateLabel.getStyleClass().add("aggregate-score");
-            aggregateLabel.setMaxWidth(Double.MAX_VALUE);
-            aggregateLabel.setAlignment(javafx.geometry.Pos.CENTER);
-            card.getChildren().add(aggregateLabel);
-        }
-
-        Label winnerLabel = new Label("WINNER: " + winner.getName());
-        winnerLabel.getStyleClass().add("match-winner");
-        winnerLabel.setMaxWidth(Double.MAX_VALUE);
-        winnerLabel.setAlignment(javafx.geometry.Pos.CENTER);
-        card.getChildren().add(winnerLabel);
-        card.getChildren().add(new Label(displayMatch.isForfeit() ? "Administrative result - details" : "Click to view incidents"));
-        card.setOnMouseClicked(event -> showMatchDetails(matches));
-        return card;
-    }
-
     private void showMatchDetails(List<Match> matches) {
-        if (matches.isEmpty()) {
-            showInformation("Match details", "Play a match to view its details.");
-            return;
-        }
-        MatchDetailsFormatter formatter = new MatchDetailsFormatter();
-        ComboBox<Match> selector = new ComboBox<>();
-        selector.getItems().setAll(matches);
-        selector.setMaxWidth(Double.MAX_VALUE);
-        selector.setConverter(new StringConverter<>() {
-            @Override public String toString(Match match) {
-                return match == null ? "" : formatter.title(match);
-            }
-            @Override public Match fromString(String value) {
-                throw new UnsupportedOperationException("Select a recorded match.");
-            }
-        });
-        TextArea timeline = new TextArea();
-        timeline.getStyleClass().add("report-area");
-        timeline.setEditable(false);
-        timeline.setWrapText(true);
-        timeline.setPrefSize(720, 480);
-        selector.valueProperty().addListener((observable, previous, selected) -> {
-            if (selected != null) {
-                timeline.setText(formatter.format(championship, selected));
-                timeline.positionCaret(0);
-            }
-        });
-        selector.getSelectionModel().selectLast();
-        VBox content = new VBox(10, new Label("Select a played match"), selector, timeline);
-        VBox.setVgrow(timeline, javafx.scene.layout.Priority.ALWAYS);
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Match details and history");
-        alert.setHeaderText("Starting lineups, match incidents and penalty shootouts");
-        alert.setResizable(true);
-        if (tournamentPane.getScene() != null) {
-            alert.initOwner(tournamentPane.getScene().getWindow());
-        }
-        alert.getDialogPane().setContent(content);
-        alert.getDialogPane().getStylesheets().add(
-                Objects.requireNonNull(getClass().getResource("/style.css")).toExternalForm());
-        alert.getDialogPane().getStyleClass().add("match-dialog");
-        alert.showAndWait();
+        matchDetailsView.show(championship, matches);
     }
 
     @FXML
@@ -1200,71 +394,6 @@ public class TournamentController {
         if (championship == null) return;
         showMatchDetails(championship.getPlayedMatches().stream()
                 .sorted(Comparator.comparing(Match::getMatchDate)).toList());
-    }
-
-    private void addTeamScoreRow(VBox card, Team team, int goals, Team winner) {
-        HBox row = new HBox(6);
-        row.getStyleClass().add("team-score-row");
-        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-        Label teamLabel = new Label(team.getName());
-        teamLabel.getStyleClass().add("match-team");
-        teamLabel.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(teamLabel, javafx.scene.layout.Priority.ALWAYS);
-
-        Label scoreLabel = new Label(String.valueOf(goals));
-        scoreLabel.getStyleClass().add("match-score");
-        scoreLabel.setMinWidth(24);
-        scoreLabel.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
-
-        if (winner.equals(team)) {
-            teamLabel.getStyleClass().add("match-team-winner");
-            scoreLabel.getStyleClass().add("match-score-winner");
-        }
-
-        row.getChildren().addAll(teamLabel, scoreLabel);
-        card.getChildren().add(row);
-    }
-
-    private int[] getAggregateScore(Match firstLeg, Match secondLeg) {
-        int homeAggregate = firstLeg.getHomeGoals() + secondLeg.getAwayGoals();
-        int awayAggregate = firstLeg.getAwayGoals() + secondLeg.getHomeGoals();
-        return new int[]{homeAggregate, awayAggregate};
-    }
-
-    private boolean isSettledByPenalties(Match match) {
-        if (match.isSettledByPenalties()) {
-            return true;
-        }
-
-        if (match.getHomeGoals() != match.getAwayGoals()) {
-            return false;
-        }
-
-        return match.getIncidents().stream()
-                .anyMatch(Incident::isShootoutPenalty);
-    }
-
-    private int[] getPenaltyScore(Match match) {
-        int home = 0;
-        int away = 0;
-
-        for (Incident incident : match.getIncidents()) {
-            if (!incident.isShootoutPenalty()) {
-                continue;
-            }
-            if (!incident.isPenaltyScored()) {
-                continue;
-            }
-            Player penaltyTaker = incident.getPenaltyTaker();
-            if (match.getHomeTeam().getPlayers().contains(penaltyTaker)) {
-                home++;
-            } else if (match.getAwayTeam().getPlayers().contains(penaltyTaker)) {
-                away++;
-            }
-        }
-
-        return new int[]{home, away};
     }
 
     private void configureCloseSave() {
@@ -1295,6 +424,11 @@ public class TournamentController {
     }
 
     private void handleWindowClose(WindowEvent event) {
+        if (operationInProgress) {
+            event.consume();
+            phaseLabel.setText("Please wait for the current operation to finish before closing.");
+            return;
+        }
         if (!saveTournament()) event.consume();
     }
 
@@ -1309,33 +443,8 @@ public class TournamentController {
         }
     }
 
-    private void showInformation(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
     private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Tournament");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        dialogs.showError(message);
     }
 
-    private void scheduleQuarterFinalsIfNeeded() {
-        if (championship.getStage() != TournamentStage.QUARTER_FINALS) {
-            return;
-        }
-
-        LocalDate lastGroupDate = championship.getMatches().stream()
-                .filter(Match::isGroupStage)
-                .map(Match::getMatchDate)
-                .max(LocalDate::compareTo)
-                .orElseThrow();
-
-        championship.scheduleQuarterFinals(lastGroupDate.plusDays(7));
-    }
 }

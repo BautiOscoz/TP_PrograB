@@ -8,7 +8,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 
 public class Lineup implements Serializable {
     @Serial
@@ -72,21 +71,11 @@ public class Lineup implements Serializable {
     public FormationType getFormation(){
         return formation;
     }
-    public Player getRandomPlayer(Random random) {
-        return players.get(random.nextInt(players.size()));
-    }
-
     public Player getGoalkeeper() {
         return players.stream()
                 .filter(p -> p.getPosition() == Position.GOALKEEPER)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Lineup has no goalkeeper."));
-    }
-
-    public List<Player> getOutfieldPlayers() {
-        return players.stream()
-                .filter(p -> p.getPosition() != Position.GOALKEEPER)
-                .toList();
     }
 
 }
